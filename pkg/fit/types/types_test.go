@@ -173,4 +173,14 @@ func TestEncoding(t *testing.T) {
 
 	b = EncodeString(nil, "")
 	assert("", []byte{0})
+
+	// fit type
+	currentEncoder = "EncodeFitType"
+	currentEndianness = LittleEndian
+	b = EncodeFitType(nil, LittleEndian, FIT_TYPE_FLOAT64)
+	assert(FIT_TYPE_FLOAT64, []byte{uint8(FIT_TYPE_FLOAT64)})
+
+	currentEndianness = BigEndian
+	b = EncodeFitType(nil, BigEndian, FIT_TYPE_UINT64)
+	assert(FIT_TYPE_UINT64, []byte{uint8(FIT_TYPE_UINT64)})
 }

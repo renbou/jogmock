@@ -84,3 +84,7 @@ func EncodeSint64(b []byte, endian Endianness, value int64) []byte {
 func EncodeString(b []byte, value string) []byte {
 	return append(append(b, []byte(value)...), 0)
 }
+
+func EncodeFitType(b []byte, endian Endianness, value FitType) []byte {
+	return EncodeEnum(b, endian, Enum(value))
+}
