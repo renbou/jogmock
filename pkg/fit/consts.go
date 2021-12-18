@@ -1,4 +1,4 @@
-package messages
+package fit
 
 const (
 	FIT_MESG_NUM_FILE_ID     = 0

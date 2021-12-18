@@ -4,23 +4,6 @@ package types
 
 import "errors"
 
-type (
-	FitEnum     uint8
-	FitSint8    int8
-	FitUint8    uint8
-	FitSint16   int16
-	FitUint16   uint16
-	FitSint32   int32
-	FitUint32   uint32
-	FitString   string
-	FitFloat32  float32
-	FitFloat64  float64
-	FitByte     byte
-	FitSint64   int64
-	FitUint64   uint64
-	FitBaseType FitEnum
-)
-
 const (
 	FIT_TYPE_BYTE_SIZE    FitUint8 = 1
 	FIT_TYPE_ENUM_SIZE    FitUint8 = FIT_TYPE_BYTE_SIZE
