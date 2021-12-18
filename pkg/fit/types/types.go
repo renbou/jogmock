@@ -12,9 +12,11 @@ import (
 
 type Endianness int
 
+//go:generate stringer -type Endianness
 const (
 	LittleEndian Endianness = iota
 	BigEndian
+	NonEndian
 )
 
 func EncodeFitUint8(b []byte, endian Endianness, value FitUint8) []byte {
@@ -81,8 +83,24 @@ func EncodeFitSint64(b []byte, endian Endianness, value FitSint64) []byte {
 	return EncodeFitUint64(b, endian, FitUint64(value))
 }
 
-func EncodeFitString(b []byte, value FitString) []byte {
-	return append(append(b, []byte(value)...), 0)
+func ValidateFitString(value FitString, length FitUint8) error {
+	// a fit string must have an additional null byte
+	if int(length) < len(value)+1 {
+		return fmt.Errorf("invalid fit string size %d (< %d expected)", length, len(value)+1)
+	}
+	return nil
+}
+
+func EncodeFitString(b []byte, value FitString, length FitUint8) []byte {
+	if err := ValidateFitString(value, length); err != nil {
+		// which is why you should validate strings before calling this...
+		panic(err)
+	}
+	res := append(b, []byte(value)...)
+	for i := len(value); i < int(length); i++ {
+		res = append(res, 0)
+	}
+	return res
 }
 
 func EncodeFitBaseType(b []byte, endian Endianness, value FitBaseType) []byte {

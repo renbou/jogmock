@@ -15,16 +15,6 @@ import (
 func assertEncoded(t *testing.T, encoderName string, endianness Endianness,
 	value interface{}, actual []byte, expected []byte) {
 
-	var endianString string
-	switch endianness {
-	case LittleEndian:
-		endianString = "LittleEndian"
-	case BigEndian:
-		endianString = "BigEndian"
-	default:
-		endianString = "NotEndianLol"
-	}
-
 	var valueRepr string
 	if strings.HasPrefix(reflect.TypeOf(value).Name(), "uint") {
 		valueRepr = fmt.Sprintf("0x%x", value)
@@ -34,7 +24,7 @@ func assertEncoded(t *testing.T, encoderName string, endianness Endianness,
 
 	if !bytes.Equal(actual, expected) {
 		t.Fatalf("%s(%s, %s) failed, expected %s, but got %s",
-			encoderName, endianString, valueRepr,
+			encoderName, endianness, valueRepr,
 			hex.EncodeToString(expected), hex.EncodeToString(actual))
 	}
 }
@@ -168,11 +158,11 @@ func TestEncoding(t *testing.T) {
 	// string
 	currentEncoder = "EncodeFitString"
 	currentEndianness = -1
-	b = EncodeFitString(nil, "aboba")
+	b = EncodeFitString(nil, "aboba", 6)
 	assert("aboba", []byte{'a', 'b', 'o', 'b', 'a', 0})
 
-	b = EncodeFitString(nil, "")
-	assert("", []byte{0})
+	b = EncodeFitString(nil, "", 3)
+	assert("", []byte{0, 0, 0})
 
 	// fit type
 	currentEncoder = "EncodeFitBaseType"

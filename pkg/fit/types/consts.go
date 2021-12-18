@@ -2,20 +2,24 @@
 
 package types
 
-type FitEnum uint8
-type FitSint8 int8
-type FitUint8 uint8
-type FitSint16 int16
-type FitUint16 uint16
-type FitSint32 int32
-type FitUint32 uint32
-type FitString string
-type FitFloat32 float32
-type FitFloat64 float64
-type FitByte byte
-type FitSint64 int64
-type FitUint64 uint64
-type FitBaseType FitEnum
+import "errors"
+
+type (
+	FitEnum     uint8
+	FitSint8    int8
+	FitUint8    uint8
+	FitSint16   int16
+	FitUint16   uint16
+	FitSint32   int32
+	FitUint32   uint32
+	FitString   string
+	FitFloat32  float32
+	FitFloat64  float64
+	FitByte     byte
+	FitSint64   int64
+	FitUint64   uint64
+	FitBaseType FitEnum
+)
 
 const (
 	FIT_TYPE_BYTE_SIZE    FitUint8 = 1
@@ -54,3 +58,19 @@ const (
 	FIT_TYPE_UINT64Z FitBaseType = 144
 	FIT_TYPE_COUNT   FitBaseType = 17
 )
+
+var ErrUnknownFitType = errors.New("unknown fit type")
+
+var FitTypeSize = map[FitBaseType]FitUint8{
+	FIT_TYPE_ENUM:    FIT_TYPE_ENUM_SIZE,
+	FIT_TYPE_SINT8:   FIT_TYPE_SINT8_SIZE,
+	FIT_TYPE_UINT8:   FIT_TYPE_UINT8_SIZE,
+	FIT_TYPE_SINT16:  FIT_TYPE_SINT16_SIZE,
+	FIT_TYPE_UINT16:  FIT_TYPE_UINT16_SIZE,
+	FIT_TYPE_SINT32:  FIT_TYPE_SINT32_SIZE,
+	FIT_TYPE_UINT32:  FIT_TYPE_UINT32_SIZE,
+	FIT_TYPE_FLOAT32: FIT_TYPE_FLOAT32_SIZE,
+	FIT_TYPE_FLOAT64: FIT_TYPE_FLOAT64_SIZE,
+	FIT_TYPE_SINT64:  FIT_TYPE_SINT64_SIZE,
+	FIT_TYPE_UINT64:  FIT_TYPE_UINT64_SIZE,
+}
