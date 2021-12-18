@@ -1,3 +1,4 @@
+// Copyright 2021 Artem Mikheev
 package crc16
 
 import (

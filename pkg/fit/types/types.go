@@ -17,74 +17,74 @@ const (
 	BigEndian
 )
 
-func EncodeUint8(b []byte, endian Endianness, value uint8) []byte {
-	encoded := []byte{value}
+func EncodeFitUint8(b []byte, endian Endianness, value FitUint8) []byte {
+	encoded := []byte{uint8(value)}
 	return append(b, encoded...)
 }
 
-func EncodeSint8(b []byte, endian Endianness, value int8) []byte {
-	return EncodeUint8(b, endian, uint8(value))
+func EncodeFitSint8(b []byte, endian Endianness, value FitSint8) []byte {
+	return EncodeFitUint8(b, endian, FitUint8(value))
 }
 
-func EncodeEnum(b []byte, endian Endianness, value Enum) []byte {
-	return EncodeUint8(b, endian, uint8(value))
+func EncodeFitEnum(b []byte, endian Endianness, value FitEnum) []byte {
+	return EncodeFitUint8(b, endian, FitUint8(value))
 }
 
-func EncodeUint16(b []byte, endian Endianness, value uint16) []byte {
+func EncodeFitUint16(b []byte, endian Endianness, value FitUint16) []byte {
 	encoded := make([]byte, 2)
 	switch endian {
 	case LittleEndian:
-		binary.LittleEndian.PutUint16(encoded, value)
+		binary.LittleEndian.PutUint16(encoded, uint16(value))
 	case BigEndian:
-		binary.BigEndian.PutUint16(encoded, value)
+		binary.BigEndian.PutUint16(encoded, uint16(value))
 	default:
 		panic(fmt.Sprintf("unknown endianness %d", endian))
 	}
 	return append(b, encoded...)
 }
 
-func EncodeSint16(b []byte, endian Endianness, value int16) []byte {
-	return EncodeUint16(b, endian, uint16(value))
+func EncodeFitSint16(b []byte, endian Endianness, value FitSint16) []byte {
+	return EncodeFitUint16(b, endian, FitUint16(value))
 }
 
-func EncodeUint32(b []byte, endian Endianness, value uint32) []byte {
+func EncodeFitUint32(b []byte, endian Endianness, value FitUint32) []byte {
 	encoded := make([]byte, 4)
 	switch endian {
 	case LittleEndian:
-		binary.LittleEndian.PutUint32(encoded, value)
+		binary.LittleEndian.PutUint32(encoded, uint32(value))
 	case BigEndian:
-		binary.BigEndian.PutUint32(encoded, value)
+		binary.BigEndian.PutUint32(encoded, uint32(value))
 	default:
 		panic(fmt.Sprintf("unknown endianness %d", endian))
 	}
 	return append(b, encoded...)
 }
 
-func EncodeSint32(b []byte, endian Endianness, value int32) []byte {
-	return EncodeUint32(b, endian, uint32(value))
+func EncodeFitSint32(b []byte, endian Endianness, value FitSint32) []byte {
+	return EncodeFitUint32(b, endian, FitUint32(value))
 }
 
-func EncodeUint64(b []byte, endian Endianness, value uint64) []byte {
+func EncodeFitUint64(b []byte, endian Endianness, value FitUint64) []byte {
 	encoded := make([]byte, 8)
 	switch endian {
 	case LittleEndian:
-		binary.LittleEndian.PutUint64(encoded, value)
+		binary.LittleEndian.PutUint64(encoded, uint64(value))
 	case BigEndian:
-		binary.BigEndian.PutUint64(encoded, value)
+		binary.BigEndian.PutUint64(encoded, uint64(value))
 	default:
 		panic(fmt.Sprintf("unknown endianness %d", endian))
 	}
 	return append(b, encoded...)
 }
 
-func EncodeSint64(b []byte, endian Endianness, value int64) []byte {
-	return EncodeUint64(b, endian, uint64(value))
+func EncodeFitSint64(b []byte, endian Endianness, value FitSint64) []byte {
+	return EncodeFitUint64(b, endian, FitUint64(value))
 }
 
-func EncodeString(b []byte, value string) []byte {
+func EncodeFitString(b []byte, value FitString) []byte {
 	return append(append(b, []byte(value)...), 0)
 }
 
-func EncodeFitType(b []byte, endian Endianness, value FitType) []byte {
-	return EncodeEnum(b, endian, Enum(value))
+func EncodeFitBaseType(b []byte, endian Endianness, value FitBaseType) []byte {
+	return EncodeFitEnum(b, endian, FitEnum(value))
 }
