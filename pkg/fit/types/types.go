@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/renbou/strava-keker/pkg/encoding"
 )
@@ -124,4 +125,11 @@ func (str *FitEncodableString) Encode(wr io.Writer, endianness encoding.Endianne
 
 func (value FitBaseType) Encode(wr io.Writer, endianness encoding.Endianness) error {
 	return FitEnum(value).Encode(wr, endianness)
+}
+
+func (baseType FitBaseType) ValidateValue(value interface{}) error {
+	if FitTypeMap[baseType] != reflect.TypeOf(value) {
+		return ErrFitBaseTypeMismatch
+	}
+	return nil
 }

@@ -5,7 +5,6 @@ package fit
 import (
 	"errors"
 	"io"
-	"reflect"
 
 	"github.com/renbou/strava-keker/pkg/encoding"
 	"github.com/renbou/strava-keker/pkg/fit/types"
@@ -67,8 +66,8 @@ func (devField *DevField) Encode(wr io.Writer, endianness encoding.Endianness) e
 	if err := devField.Def.validate(); err != nil {
 		return err
 	}
-	if types.FitTypeMap[devField.Def.Field.BaseType] != reflect.TypeOf(devField.Value) {
-		return ErrFieldTypeMismatch
+	if err := devField.Def.Field.BaseType.ValidateValue(devField.Value); err != nil {
+		return err
 	}
 
 	switch devField.Value.(type) {

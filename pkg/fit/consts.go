@@ -19,7 +19,6 @@ const (
 )
 
 var (
-	ErrFieldTypeMismatch   = errors.New("field definition base type and actual type of field differ")
 	ErrInvalidLocalMsgType = errors.New("invalid local message type (> 15)")
 	ErrInvalidMsgType      = errors.New("invalid message type (> 1)")
 	ErrInvalidMsgSpecific  = errors.New("only definition message can have msg specific set")

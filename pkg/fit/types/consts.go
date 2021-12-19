@@ -44,7 +44,10 @@ const (
 	FIT_TYPE_COUNT   FitBaseType = 17
 )
 
-var ErrUnknownFitType = errors.New("unknown fit type")
+var (
+	ErrUnknownFitType      = errors.New("unknown fit type")
+	ErrFitBaseTypeMismatch = errors.New("fit base type and actual type of value differ")
+)
 
 var FitTypeSize = map[FitBaseType]FitUint8{
 	FIT_TYPE_ENUM:    FIT_TYPE_ENUM_SIZE,

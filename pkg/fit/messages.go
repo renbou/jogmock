@@ -42,18 +42,33 @@ func encodeMessageHeader(wr io.Writer, msgType uint8, msgSpecific bool, localMsg
 	return err
 }
 
-type MessageHeader struct {
-	LocalMsgType uint8
+type messageHeader struct {
+	localMsgType uint8
 }
 
 type DefinitionMessage struct {
-	MessageHeader
 	GlobalMsgNum types.FitUint16
 	FieldDefs    []*FieldDefinition
 	DevFieldDefs []*DevFieldDefinition
 }
 
-func (defMsg *DefinitionMessage) Encode(wr io.Writer, endianness encoding.Endianness) error {
+func (defMsg *DefinitionMessage) ConstructLocalMessage(localMsgType uint8) *localDefinitionMessage {
+	return &localDefinitionMessage{
+		messageHeader: messageHeader{
+			localMsgType,
+		},
+		def: defMsg,
+	}
+}
+
+// localDefinitionMessage is a DefinitionMessage tied to a
+// specific LocalMsgType, and is thus encodable
+type localDefinitionMessage struct {
+	messageHeader
+	def *DefinitionMessage
+}
+
+func (localDefMsg *localDefinitionMessage) Encode(wr io.Writer, endianness encoding.Endianness) error {
 	if !endianness.IsKnown() {
 		return encoding.ErrUnknownEndianness
 	}
@@ -61,26 +76,26 @@ func (defMsg *DefinitionMessage) Encode(wr io.Writer, endianness encoding.Endian
 	mwr := &maybe.MaybeWriter{Writer: wr}
 
 	// Encode the single-byte message header
-	encodeMessageHeader(mwr, defMsgType, len(defMsg.DevFieldDefs) > 0, defMsg.LocalMsgType)
+	encodeMessageHeader(mwr, defMsgType, len(localDefMsg.def.DevFieldDefs) > 0, localDefMsg.localMsgType)
 
 	// Write reserved byte and endianness (architecture) byte
 	mwr.Write([]byte{0, endiannessByteMap[endianness]})
 
 	// Encode global message num
-	defMsg.GlobalMsgNum.Encode(mwr, endianness)
+	localDefMsg.def.GlobalMsgNum.Encode(mwr, endianness)
 
 	// Encode number of field defs as a single byte
-	types.FitUint8(len(defMsg.FieldDefs)).Encode(mwr, endianness)
+	types.FitUint8(len(localDefMsg.def.FieldDefs)).Encode(mwr, endianness)
 
 	// Encode all field defs
-	for _, fieldDef := range defMsg.FieldDefs {
+	for _, fieldDef := range localDefMsg.def.FieldDefs {
 		fieldDef.Encode(mwr, endianness)
 	}
 
 	// Encode dev fields if we need to
-	if len(defMsg.DevFieldDefs) > 0 {
-		types.FitUint8(len(defMsg.DevFieldDefs)).Encode(mwr, endianness)
-		for _, devFieldDef := range defMsg.DevFieldDefs {
+	if len(localDefMsg.def.DevFieldDefs) > 0 {
+		types.FitUint8(len(localDefMsg.def.DevFieldDefs)).Encode(mwr, endianness)
+		for _, devFieldDef := range localDefMsg.def.DevFieldDefs {
 			devFieldDef.Encode(mwr, endianness)
 		}
 	}
@@ -88,42 +103,64 @@ func (defMsg *DefinitionMessage) Encode(wr io.Writer, endianness encoding.Endian
 }
 
 // ConstructData constructs a data message with the given values as fields
-func (defMsg *DefinitionMessage) ConstructData(values ...interface{}) (*DataMessage, error) {
-	if len(values) != len(defMsg.FieldDefs)+len(defMsg.DevFieldDefs) {
+func (localDefMsg *localDefinitionMessage) ConstructData(values ...interface{}) (*localDataMessage, error) {
+	if len(values) != len(localDefMsg.def.FieldDefs)+len(localDefMsg.def.DevFieldDefs) {
 		return nil, ErrFieldNumMismatch
 	}
-	dataMsg := &DataMessage{
-		Def: defMsg,
+	localDataMsg := &localDataMessage{
+		messageHeader: localDefMsg.messageHeader,
+		def:           localDefMsg.def,
 	}
 
 	index := 0
-	for _, fieldDef := range defMsg.FieldDefs {
-		dataMsg.Fields = append(dataMsg.Fields, &Field{
+	for _, fieldDef := range localDefMsg.def.FieldDefs {
+		if err := fieldDef.BaseType.ValidateValue(values[index]); err != nil {
+			return nil, err
+		}
+		localDataMsg.fields = append(localDataMsg.fields, &Field{
 			Def:   fieldDef,
 			Value: values[index],
 		})
 		index++
 	}
 
-	for _, devFieldDef := range defMsg.DevFieldDefs {
-		dataMsg.DevFields = append(dataMsg.DevFields, &DevField{
+	for _, devFieldDef := range localDefMsg.def.DevFieldDefs {
+		if err := devFieldDef.Field.BaseType.ValidateValue(values[index]); err != nil {
+			return nil, err
+		}
+		localDataMsg.devFields = append(localDataMsg.devFields, &DevField{
 			Def:   devFieldDef,
 			Value: values[index],
 		})
 		index++
 	}
-	return dataMsg, nil
+	return localDataMsg, nil
 }
 
-type DataMessage struct {
-	Def       *DefinitionMessage
-	Fields    []*Field
-	DevFields []*DevField
+type localDataMessage struct {
+	messageHeader
+	def       *DefinitionMessage
+	fields    []*Field
+	devFields []*DevField
 }
 
-func (dataMsg *DataMessage) Encode(wr io.Writer, endianness encoding.Endianness) error {
-	return nil
-}
+func (localDataMsg *localDataMessage) Encode(wr io.Writer, endianness encoding.Endianness) error {
+	if !endianness.IsKnown() {
+		return encoding.ErrUnknownEndianness
+	}
 
-// Global messages
-var DeveloperDataId = &DefinitionMessage{}
+	mwr := &maybe.MaybeWriter{Writer: wr}
+
+	// Encode the single-byte message header
+	encodeMessageHeader(mwr, dataMsgType, false, localDataMsg.localMsgType)
+
+	// Encode fields
+	for _, field := range localDataMsg.fields {
+		field.Encode(mwr, endianness)
+	}
+	for _, devField := range localDataMsg.devFields {
+		devField.Encode(mwr, endianness)
+	}
+
+	return mwr.Error()
+}
