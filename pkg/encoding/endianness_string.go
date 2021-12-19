@@ -10,12 +10,11 @@ func _() {
 	var x [1]struct{}
 	_ = x[LittleEndian-0]
 	_ = x[BigEndian-1]
-	_ = x[NonEndian-2]
 }
 
-const _Endianness_name = "LittleEndianBigEndianNonEndian"
+const _Endianness_name = "LittleEndianBigEndian"
 
-var _Endianness_index = [...]uint8{0, 12, 21, 30}
+var _Endianness_index = [...]uint8{0, 12, 21}
 
 func (i Endianness) String() string {
 	if i < 0 || i >= Endianness(len(_Endianness_index)-1) {

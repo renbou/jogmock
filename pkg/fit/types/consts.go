@@ -2,7 +2,10 @@
 
 package types
 
-import "errors"
+import (
+	"errors"
+	"reflect"
+)
 
 const (
 	FIT_TYPE_BYTE_SIZE    FitUint8 = 1
@@ -13,7 +16,6 @@ const (
 	FIT_TYPE_SINT16_SIZE  FitUint8 = FIT_TYPE_UINT16_SIZE
 	FIT_TYPE_UINT32_SIZE  FitUint8 = 4
 	FIT_TYPE_SINT32_SIZE  FitUint8 = FIT_TYPE_UINT32_SIZE
-	FIT_TYPE_STRING_SIZE  FitUint8 = 1
 	FIT_TYPE_FLOAT32_SIZE FitUint8 = 4
 	FIT_TYPE_FLOAT64_SIZE FitUint8 = 8
 	FIT_TYPE_UINT64_SIZE  FitUint8 = 8
@@ -56,4 +58,17 @@ var FitTypeSize = map[FitBaseType]FitUint8{
 	FIT_TYPE_FLOAT64: FIT_TYPE_FLOAT64_SIZE,
 	FIT_TYPE_SINT64:  FIT_TYPE_SINT64_SIZE,
 	FIT_TYPE_UINT64:  FIT_TYPE_UINT64_SIZE,
+}
+
+var FitTypeMap = map[FitBaseType]reflect.Type{
+	FIT_TYPE_ENUM:   reflect.TypeOf((*FitEnum)(nil)).Elem(),
+	FIT_TYPE_SINT8:  reflect.TypeOf((*FitSint8)(nil)).Elem(),
+	FIT_TYPE_UINT8:  reflect.TypeOf((*FitUint8)(nil)).Elem(),
+	FIT_TYPE_SINT16: reflect.TypeOf((*FitSint16)(nil)).Elem(),
+	FIT_TYPE_UINT16: reflect.TypeOf((*FitUint16)(nil)).Elem(),
+	FIT_TYPE_SINT32: reflect.TypeOf((*FitSint32)(nil)).Elem(),
+	FIT_TYPE_UINT32: reflect.TypeOf((*FitUint32)(nil)).Elem(),
+	FIT_TYPE_SINT64: reflect.TypeOf((*FitSint64)(nil)).Elem(),
+	FIT_TYPE_UINT64: reflect.TypeOf((*FitUint64)(nil)).Elem(),
+	FIT_TYPE_STRING: reflect.TypeOf((*FitString)(nil)).Elem(),
 }

@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/renbou/strava-keker/pkg/encoding"
 	"github.com/renbou/strava-keker/pkg/fit/types"
+	"github.com/renbou/strava-keker/pkg/io/maybe"
 )
 
 type FieldDefinition struct {
@@ -17,10 +19,14 @@ type FieldDefinition struct {
 	BaseType types.FitBaseType
 }
 
-// validateFitFieldDefinition validates the field definition, specifically the
+// validate validates the field definition, specifically the
 // specified size. Mostly for catching accidental bugs, since the field defs aren't
 // all hardcoded, etc
-func validateFitFieldDefinition(fieldDef *FieldDefinition) error {
+func (fieldDef *FieldDefinition) validate() error {
+	if _, ok := types.FitTypeMap[fieldDef.BaseType]; !ok {
+		return types.ErrUnknownFitType
+	}
+
 	if fieldDef.BaseType == types.FIT_TYPE_STRING {
 		if fieldDef.Size < 1 {
 			return errors.New("field definition size with base string type must be at least 1")
@@ -38,19 +44,14 @@ func validateFitFieldDefinition(fieldDef *FieldDefinition) error {
 }
 
 func (fieldDef *FieldDefinition) Encode(wr io.Writer, endianness encoding.Endianness) error {
-	if err := validateFitFieldDefinition(fieldDef); err != nil {
+	if err := fieldDef.validate(); err != nil {
 		return err
 	}
-	if err := fieldDef.DefNum.Encode(wr, endianness); err != nil {
-		return err
-	}
-	if err := fieldDef.Size.Encode(wr, endianness); err != nil {
-		return err
-	}
-	if err := fieldDef.BaseType.Encode(wr, endianness); err != nil {
-		return err
-	}
-	return nil
+	mwr := &maybe.MaybeWriter{Writer: wr}
+	fieldDef.DefNum.Encode(mwr, endianness)
+	fieldDef.Size.Encode(mwr, endianness)
+	fieldDef.BaseType.Encode(mwr, endianness)
+	return mwr.Error()
 }
 
 type Field struct {
@@ -59,8 +60,11 @@ type Field struct {
 }
 
 func (field *Field) Encode(wr io.Writer, endianness encoding.Endianness) error {
-	if err := validateFitFieldDefinition(field.Def); err != nil {
+	if err := field.Def.validate(); err != nil {
 		return err
+	}
+	if types.FitTypeMap[field.Def.BaseType] != reflect.TypeOf(field.Value) {
+		return ErrFieldTypeMismatch
 	}
 
 	switch field.Value.(type) {
@@ -68,8 +72,8 @@ func (field *Field) Encode(wr io.Writer, endianness encoding.Endianness) error {
 		return field.Value.(encoding.EndianEncoder).Encode(wr, endianness)
 	case types.FitString:
 		encodableStr := &types.FitEncodableString{
-			field.Value.(types.FitString),
-			field.Def.Size,
+			FitString: field.Value.(types.FitString),
+			Length:    field.Def.Size,
 		}
 		if err := encodableStr.Validate(); err != nil {
 			return err

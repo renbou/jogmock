@@ -10,7 +10,13 @@ type Endianness int
 const (
 	LittleEndian Endianness = iota
 	BigEndian
-	NonEndian
 )
 
 var ErrUnknownEndianness error = errors.New("unknown endianness")
+
+func (endianness Endianness) IsKnown() bool {
+	if endianness != LittleEndian && endianness != BigEndian {
+		return false
+	}
+	return true
+}

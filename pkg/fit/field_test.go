@@ -21,7 +21,7 @@ func encodeAndValidate(t *testing.T, value encoding.EndianEncoder,
 
 	err = encoder.Encode(value)
 	if valid && err != nil {
-		t.Fatalf("Error not expected for encoding %+v with endianness %s", value, endianness)
+		t.Fatalf("Error not expected for encoding %+v with endianness %s: %v", value, endianness, err)
 	}
 
 	if !valid {
@@ -135,4 +135,15 @@ func TestFitFieldEncoding(t *testing.T) {
 		Value: types.FitSint32(714916203),
 	}, encoding.LittleEndian, true,
 		[]byte{0x6b, 0xc1, 0x9c, 0x2a})
+}
+
+func TestFitFieldErrors(t *testing.T) {
+	encodeAndValidate(t, &Field{
+		Def: &FieldDefinition{
+			DefNum:   0,
+			Size:     types.FIT_TYPE_SINT32_SIZE,
+			BaseType: types.FIT_TYPE_SINT32,
+		},
+		Value: types.FitString("aboba"),
+	}, encoding.LittleEndian, false, nil)
 }

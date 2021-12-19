@@ -1,13 +1,27 @@
 package fit
 
+import (
+	"errors"
+
+	"github.com/renbou/strava-keker/pkg/fit/types"
+)
+
 const (
-	FIT_MESG_NUM_FILE_ID     = 0
-	FIT_MESG_SESSION         = 18
-	FIT_MESG_LAP             = 19
-	FIT_MESG_RECORD          = 20
-	FIT_MESG_EVENT           = 21
-	FIT_MESG_DEVICE_INFO     = 23
-	FIT_MESG_ACTIVITY        = 34
-	FIT_MESG_NUM_FIELD_DESC  = 206
-	FIT_MESG_NUM_DEV_DATA_ID = 207
+	FIT_MESG_NUM_FILE_ID     types.FitUint16 = 0
+	FIT_MESG_NUM_SESSION     types.FitUint16 = 18
+	FIT_MESG_NUM_LAP         types.FitUint16 = 19
+	FIT_MESG_NUM_RECORD      types.FitUint16 = 20
+	FIT_MESG_NUM_EVENT       types.FitUint16 = 21
+	FIT_MESG_NUM_DEVICE_INFO types.FitUint16 = 23
+	FIT_MESG_NUM_ACTIVITY    types.FitUint16 = 34
+	FIT_MESG_NUM_FIELD_DESC  types.FitUint16 = 206
+	FIT_MESG_NUM_DEV_DATA_ID types.FitUint16 = 207
+)
+
+var (
+	ErrFieldTypeMismatch   = errors.New("field definition base type and actual type of field differ")
+	ErrInvalidLocalMsgType = errors.New("invalid local message type (> 15)")
+	ErrInvalidMsgType      = errors.New("invalid message type (> 1)")
+	ErrInvalidMsgSpecific  = errors.New("only definition message can have msg specific set")
+	ErrFieldNumMismatch    = errors.New("unexpected number of fields")
 )
