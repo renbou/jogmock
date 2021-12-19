@@ -159,10 +159,19 @@ func TestMessageEncoding(t *testing.T) {
 		types.FitString("Redmi Note 9 Pro"), types.FitString("10"),
 	)
 	if err != nil {
-		t.Fatalf("Unexpected error during data construction for developer data id: %v", err)
+		t.Fatalf("Unexpected error during data construction for local device info: %v", err)
 	}
 	localDeviceInfoMsgBytes, _ := hex.DecodeString(
 		"00010900663233302E313020283132323139383829005869616F6D69005265646D69204E6F746520392050726F00313000",
 	)
 	encodeAndValidate(t, localDeviceInfoMsg, encoding.BigEndian, true, localDeviceInfoMsgBytes)
+
+	_, err = localDeviceInfoMsgDef.ConstructData(
+		types.FitUint16(265), types.FitUint16(102),
+		types.FitString("230.10 (1221988)"), types.FitString("Xiaomi"),
+		types.FitString("Redmi Note 9 Pro"), types.FitUint16(1),
+	)
+	if err == nil {
+		t.Fatalf("Expected error during data construction for invalid local device info")
+	}
 }
