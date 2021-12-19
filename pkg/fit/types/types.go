@@ -133,3 +133,8 @@ func (baseType FitBaseType) ValidateValue(value interface{}) error {
 	}
 	return nil
 }
+
+// IsImplemented returns true if t is an implemented fit type, false otherwise
+func IsFitType(t reflect.Type) bool {
+	return implementedFitTypes[t]
+}

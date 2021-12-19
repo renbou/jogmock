@@ -75,3 +75,16 @@ var FitTypeMap = map[FitBaseType]reflect.Type{
 	FIT_TYPE_UINT64: reflect.TypeOf((*FitUint64)(nil)).Elem(),
 	FIT_TYPE_STRING: reflect.TypeOf((*FitString)(nil)).Elem(),
 }
+
+var implementedFitTypes = map[reflect.Type]bool{
+	FitTypeMap[FIT_TYPE_ENUM]:   true,
+	FitTypeMap[FIT_TYPE_SINT8]:  true,
+	FitTypeMap[FIT_TYPE_UINT8]:  true,
+	FitTypeMap[FIT_TYPE_SINT16]: true,
+	FitTypeMap[FIT_TYPE_UINT16]: true,
+	FitTypeMap[FIT_TYPE_SINT32]: true,
+	FitTypeMap[FIT_TYPE_UINT32]: true,
+	FitTypeMap[FIT_TYPE_SINT64]: true,
+	FitTypeMap[FIT_TYPE_UINT64]: true,
+	FitTypeMap[FIT_TYPE_STRING]: true,
+}

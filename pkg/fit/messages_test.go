@@ -43,9 +43,7 @@ func TestMessageEncoding(t *testing.T) {
 		0x40, 0x00, 0x01, 0x00, 0x00, 0x04, 0x01, 0x02, 0x84, 0x02, 0x02, 0x84, 0x00, 0x01, 0x00, 0x04, 0x04, 0x86,
 	})
 
-	localFileIdMsg, err := localFileIdMsgDef.ConstructData(
-		types.FitUint16(265), types.FitUint16(102), types.FitEnum(4), types.FitUint32(1007562558),
-	)
+	localFileIdMsg, err := localFileIdMsgDef.ConstructData(265, 102, 4, 1007562558)
 	if err != nil {
 		t.Fatalf("Unexpected error during data construction for file id: %v", err)
 	}
@@ -75,9 +73,7 @@ func TestMessageEncoding(t *testing.T) {
 		0x40, 0x00, 0x01, 0x00, 0xCF, 0x02, 0x03, 0x01, 0x02, 0x04, 0x04, 0x86,
 	})
 
-	localDeveloperDataIdMsg, err := localDeveloperDataIdMsgDef.ConstructData(
-		types.FitUint8(0), types.FitUint32(1221988),
-	)
+	localDeveloperDataIdMsg, err := localDeveloperDataIdMsgDef.ConstructData(0, 1221988)
 	if err != nil {
 		t.Fatalf("Unexpected error during data construction for developer data id: %v", err)
 	}
@@ -153,10 +149,8 @@ func TestMessageEncoding(t *testing.T) {
 		0x03, 0x11, 0x00, 0x06, 0x07, 0x00, 0x04, 0x11, 0x00, 0x05, 0x03, 0x00,
 	})
 
-	localDeviceInfoMsg, err := localDeviceInfoMsgDef.ConstructData(
-		types.FitUint16(265), types.FitUint16(102),
-		types.FitString("230.10 (1221988)"), types.FitString("Xiaomi"),
-		types.FitString("Redmi Note 9 Pro"), types.FitString("10"),
+	localDeviceInfoMsg, err := localDeviceInfoMsgDef.ConstructData(265, 102,
+		"230.10 (1221988)", "Xiaomi", "Redmi Note 9 Pro", "10",
 	)
 	if err != nil {
 		t.Fatalf("Unexpected error during data construction for local device info: %v", err)
