@@ -22,5 +22,6 @@ var (
 	ErrInvalidLocalMsgType = errors.New("invalid local message type (> 15)")
 	ErrInvalidMsgType      = errors.New("invalid message type (> 1)")
 	ErrInvalidMsgSpecific  = errors.New("only definition message can have msg specific set")
+	ErrInvalidMessage      = errors.New("message is not a valid definition or data message type")
 	ErrFieldNumMismatch    = errors.New("unexpected number of fields")
 )

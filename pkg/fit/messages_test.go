@@ -149,8 +149,8 @@ func TestMessageEncoding(t *testing.T) {
 		0x03, 0x11, 0x00, 0x06, 0x07, 0x00, 0x04, 0x11, 0x00, 0x05, 0x03, 0x00,
 	})
 
-	localDeviceInfoMsg, err := localDeviceInfoMsgDef.ConstructData(265, 102,
-		"230.10 (1221988)", "Xiaomi", "Redmi Note 9 Pro", "10",
+	localDeviceInfoMsg, err := localDeviceInfoMsgDef.ConstructData(
+		265, 102, "230.10 (1221988)", "Xiaomi", "Redmi Note 9 Pro", "10",
 	)
 	if err != nil {
 		t.Fatalf("Unexpected error during data construction for local device info: %v", err)
