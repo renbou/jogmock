@@ -6,7 +6,6 @@
 package crc16
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"hash"
@@ -54,9 +53,9 @@ func (c *crc16) Write(bytes []byte) (n int, err error) {
 }
 
 func (c *crc16) Sum(b []byte) []byte {
-	buffer := bytes.NewBuffer(b)
-	binary.Write(buffer, binary.LittleEndian, c.crc)
-	return buffer.Bytes()
+	crcBytes := make([]byte, 2)
+	binary.LittleEndian.PutUint16(crcBytes, c.crc)
+	return append(b, crcBytes...)
 }
 
 func (c *crc16) Size() int {
@@ -75,4 +74,11 @@ func (c *crc16) BlockSize() int {
 // parameters poly=0x8005, init=0x0000, refIn=true, refOut=true, xorOut=0x0000.
 func New() hash.Hash {
 	return &crc16{crc: 0}
+}
+
+// Checksum returns the CRC-16 checksum of data
+func Checksum(data []byte) uint16 {
+	crc := &crc16{crc: 0}
+	_, _ = crc.Write(data)
+	return crc.crc
 }

@@ -26,7 +26,7 @@ func assertCrc16(b []byte, expectedSum uint16) error {
 			"crc calculation failed, written %v out of %v bytes", n, len(b))
 	}
 
-	buffer := crc.Sum(make([]byte, 0, crc.Size()))
+	buffer := crc.Sum(nil)
 	err = binary.Read(bytes.NewBuffer(buffer), binary.LittleEndian, &actualSum)
 	if err != nil {
 		return err
@@ -35,6 +35,12 @@ func assertCrc16(b []byte, expectedSum uint16) error {
 		return fmt.Errorf(
 			"crc actual sum (0x%x) not equal to expected sum (0x%x)",
 			actualSum, expectedSum)
+	}
+
+	if checksum := Checksum(b); checksum != actualSum {
+		return fmt.Errorf("Checksum (0x%x) not equal to calculated actual sum (0x%x)",
+			checksum, actualSum,
+		)
 	}
 
 	return nil
