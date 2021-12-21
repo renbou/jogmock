@@ -4,6 +4,7 @@ package strava
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -43,7 +44,7 @@ type ActivityOptions struct {
 // StravaActivity defines a single strava activity simulated
 // with the wanted parameters which can be encoded into a
 // fit file with the according format (reverse engineered)
-type stravaActivity struct {
+type StravaActivity struct {
 	appVersion         uint32
 	mobileAppVersion   string
 	deviceManufacturer string
@@ -59,7 +60,7 @@ type stravaActivity struct {
 
 // NewActivity validates passed ActivityOptions and constructs
 // a new activity based on those options
-func NewActivity(options *ActivityOptions) (*stravaActivity, error) {
+func NewActivity(options *ActivityOptions) (*StravaActivity, error) {
 	if options.AppVersion == 0 {
 		return nil, errors.New("app version must not be zero")
 	}
@@ -87,11 +88,11 @@ func NewActivity(options *ActivityOptions) (*stravaActivity, error) {
 	case StravaActivityTypeRide:
 		break
 	default:
-		return nil, errors.New("activity type is invalid")
+		return nil, fmt.Errorf("activity type %s is invalid", options.ActivityType)
 	}
 
 	// fit time begins at unix 631065600
-	if options.StartTime.Add(time.Second*631065600).Year() != time.Now().Year() {
+	if options.StartTime.Year() != time.Now().Year() {
 		return nil, errors.New("start time year doesn't match current year, smth must be wrong")
 	}
 
@@ -99,16 +100,17 @@ func NewActivity(options *ActivityOptions) (*stravaActivity, error) {
 		return nil, errors.New("desired speed is less than 3 km/h, seems too slow")
 	}
 
-	return &stravaActivity{
+	return &StravaActivity{
 		appVersion:         options.AppVersion,
 		mobileAppVersion:   options.MobileAppVersion,
 		deviceManufacturer: options.DeviceManufacturer,
 		deviceModel:        options.DeviceModel,
 		deviceOsVersion:    options.DeviceOsVersion,
 		activityType:       options.ActivityType,
-		startTime:          options.StartTime,
-		desiredSpeed:       options.DesiredSpeed,
-		activityRecords:    make([]*activityRecord, 0, 64),
+		// fit time is offset by 631065600 seconds
+		startTime:       options.StartTime.Add(-time.Second * 631065600),
+		desiredSpeed:    options.DesiredSpeed,
+		activityRecords: make([]*activityRecord, 0, 64),
 	}, nil
 }
 
@@ -123,7 +125,7 @@ type Record struct {
 
 // TODO first and last record mustt have speed close to zero
 // TODO generate records properly
-func (act *stravaActivity) AddRecord(record Record) error {
+func (act *StravaActivity) AddRecord(record Record) error {
 	if record.Lat < -90 || record.Lat > 90 {
 		return errors.New("record latitude isn't in bounds")
 	}
@@ -220,7 +222,7 @@ const (
 	STRAVA_NOICE_GPS_ACCURACY      = 4
 )
 
-func fitActivitySport(act *stravaActivity) uint8 {
+func fitActivitySport(act *StravaActivity) uint8 {
 	switch act.activityType {
 	case StravaActivityTypeRide:
 		return 2
@@ -232,7 +234,7 @@ func fitActivitySport(act *stravaActivity) uint8 {
 }
 
 func fitEncodeDistanceKm(distance float64) int {
-	return int(math.Round(distance * 10000.0))
+	return int(math.Round(distance * 100000.0))
 }
 
 func fitEncodeSpeedKmH(speed float64) int {
@@ -250,11 +252,11 @@ func fitEncodeCoordinate(coord float64) int {
 }
 
 func fitEncodeDuration(duration time.Duration) int {
-	return int(duration.Seconds())
+	return int(duration.Milliseconds())
 }
 
 // BuildFitFile creates a fit file based on the filled activity
-func (act *stravaActivity) BuildFitFile() (*fit.FitFile, error) {
+func (act *StravaActivity) BuildFitFile() (*fit.FitFile, error) {
 	file := new(fit.FitFile)
 	if err := act.writeHeader(file); err != nil {
 		return nil, err
@@ -268,7 +270,7 @@ func (act *stravaActivity) BuildFitFile() (*fit.FitFile, error) {
 	return file, nil
 }
 
-func (act *stravaActivity) writeHeader(file *fit.FitFile) error {
+func (act *StravaActivity) writeHeader(file *fit.FitFile) error {
 	// add simple file id message
 	fileIdMessage, err := getFileIdMessageDefinition()
 	if err != nil {
@@ -411,7 +413,7 @@ func (act *stravaActivity) writeHeader(file *fit.FitFile) error {
 	return nil
 }
 
-func (act *stravaActivity) writeBody(file *fit.FitFile) error {
+func (act *StravaActivity) writeBody(file *fit.FitFile) error {
 	// add event message on start of activity
 	eventMessage, err := getEventMessageDefinition()
 	if err != nil {
@@ -482,7 +484,7 @@ func (act *stravaActivity) writeBody(file *fit.FitFile) error {
 	return nil
 }
 
-func (act *stravaActivity) writeFooter(file *fit.FitFile) error {
+func (act *StravaActivity) writeFooter(file *fit.FitFile) error {
 	// add device battery info message on end of activity
 	deviceInfoBatteryMessage, err := getDeviceInfoBatteryMessageDefinition()
 	if err != nil {

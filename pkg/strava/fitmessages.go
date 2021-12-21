@@ -38,7 +38,7 @@ func getFileIdMessageDefinition() (*fit.DefinitionMessage, error) {
 	}, nil
 }
 
-func getDeviceInfoMessageDefinition(act *stravaActivity, dev *devData) (*fit.DefinitionMessage, error) {
+func getDeviceInfoMessageDefinition(act *StravaActivity, dev *devData) (*fit.DefinitionMessage, error) {
 	mobileAppVersionDevField, err := dev.getFieldDefinition("mobile_app_version", len(act.mobileAppVersion))
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func getActivityMessageDefinition() (*fit.DefinitionMessage, error) {
 	}, nil
 }
 
-func getSessionMessageDefinition(act *stravaActivity, dev *devData) (*fit.DefinitionMessage, error) {
+func getSessionMessageDefinition(act *StravaActivity, dev *devData) (*fit.DefinitionMessage, error) {
 	liveActivityIdDevField, err := dev.getFieldDefinition("live_activity_id")
 	if err != nil {
 		return nil, err
