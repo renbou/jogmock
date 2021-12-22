@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-
 	"github.com/google/uuid"
+
 	"github.com/renbou/strava-keker/pkg/encoding"
 	"github.com/renbou/strava-keker/pkg/fit"
 	"github.com/renbou/strava-keker/pkg/strava"
@@ -31,6 +31,7 @@ var (
 	startTime           int
 	stravaEmail         string
 	stravaPassword      string
+	dontUpload          bool
 )
 
 var rootCmd = &cobra.Command{
@@ -53,6 +54,7 @@ func init() {
 	rootCmd.Flags().StringVar(&gpxFilePath, "gpx", "", "path to gpx file with route")
 	rootCmd.Flags().StringVar(&stravaEmail, "email", "", "your email login for strava")
 	rootCmd.Flags().StringVar(&stravaPassword, "password", "", "your password for strava")
+	rootCmd.Flags().BoolVar(&dontUpload, "dont", false, "don't actually upload, for testing")
 
 	rootCmd.MarkFlagRequired("activity")
 	rootCmd.MarkFlagRequired("name")
@@ -197,6 +199,10 @@ func sendActivity(fitFile *fit.FitFile) error {
 		return err
 	}
 
+	if dontUpload {
+		return nil
+	}
+
 	resp, err := client.R().
 		SetFileReader("file", randomActivityId+"-activity.fit", activityBuffer).
 		SetMultipartField("metadata", "", "application/json", metadataBuffer).
@@ -243,7 +249,7 @@ func readGpxIntoActivity(activity *strava.StravaActivity, gpxFilePath string) er
 			return err
 		}
 
-		if err := activity.AddRecord(strava.Record{
+		if err := activity.AddRecord(&strava.Record{
 			Lat:      lat,
 			Lon:      lon,
 			Altitude: trackPart.Elevation,

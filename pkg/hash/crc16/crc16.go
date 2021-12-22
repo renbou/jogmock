@@ -7,7 +7,6 @@ package crc16
 
 import (
 	"encoding/binary"
-	"fmt"
 	"hash"
 )
 
@@ -41,11 +40,10 @@ func (c *crc16) iterate(b byte) {
 }
 
 func (c *crc16) Write(bytes []byte) (n int, err error) {
-	for i, b := range bytes {
+	for _, b := range bytes {
 		bf := c.crc
 		c.iterate(b)
 		if c.crc == 0 && bf != 0 {
-			fmt.Println(i)
 			c.crc = 0
 		}
 	}

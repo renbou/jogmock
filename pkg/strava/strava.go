@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/renbou/strava-keker/pkg/fit"
@@ -56,6 +57,14 @@ type StravaActivity struct {
 	totalActiveTime    time.Duration
 	totalDistance      float64
 	activityRecords    []*activityRecord
+	// roughly equal number of seconds in a wave
+	waveNumSegments int
+	waveIndex       int
+	wavePrevSlope   float64
+	waveCurSlope    float64
+	// maximum amount by which the speed can differ from the desired
+	// depends on activityType (it's larger for bike rides)
+	maxPossibleSpeedAmplitude float64
 }
 
 // NewActivity validates passed ActivityOptions and constructs
@@ -100,7 +109,7 @@ func NewActivity(options *ActivityOptions) (*StravaActivity, error) {
 		return nil, errors.New("desired speed is less than 3 km/h, seems too slow")
 	}
 
-	return &StravaActivity{
+	activity := &StravaActivity{
 		appVersion:         options.AppVersion,
 		mobileAppVersion:   options.MobileAppVersion,
 		deviceManufacturer: options.DeviceManufacturer,
@@ -111,7 +120,15 @@ func NewActivity(options *ActivityOptions) (*StravaActivity, error) {
 		startTime:       options.StartTime.Add(-time.Second * 631065600),
 		desiredSpeed:    options.DesiredSpeed,
 		activityRecords: make([]*activityRecord, 0, 64),
-	}, nil
+	}
+	if options.ActivityType == StravaActivityTypeRun {
+		// 0.75 km/h
+		activity.maxPossibleSpeedAmplitude = 1.5
+	} else {
+		// 1.2 km/h
+		activity.maxPossibleSpeedAmplitude = 3
+	}
+	return activity, nil
 }
 
 // Record represents a single record which can be added to
@@ -123,9 +140,182 @@ type Record struct {
 	Altitude float64
 }
 
+// haversin(θ) function
+func hsin(theta float64) float64 {
+	return math.Pow(math.Sin(theta/2), 2)
+}
+
+func degToRad(deg float64) float64 {
+	return deg * math.Pi / 180
+}
+
+func radToDeg(rad float64) float64 {
+	return rad * 180 / math.Pi
+}
+
+// http://en.wikipedia.org/wiki/Haversine_formula
+func distanceBetweenCoords(lat1, lon1, lat2, lon2 float64) float64 {
+	var la1, lo1, la2, lo2, earthRadiusM float64
+	la1 = degToRad(lat1)
+	lo1 = degToRad(lon1)
+	la2 = degToRad(lat2)
+	lo2 = degToRad(lon2)
+
+	earthRadiusM = 6378100
+
+	// calculate
+	h := hsin(la2-la1) + math.Cos(la1)*math.Cos(la2)*hsin(lo2-lo1)
+
+	return 2 * earthRadiusM * math.Asin(math.Sqrt(h)) / 1000
+}
+
+func randFloat64InRange(a, b float64) float64 {
+	return rand.Float64()*(b-a) + a
+}
+
+func randIntInRange(a, b int) int {
+	return a + rand.Intn(b-a+1)
+}
+
+func (act *StravaActivity) generateNewWave() {
+	act.wavePrevSlope = act.waveCurSlope
+
+	// determine type of wave
+	// 0: rare big wave
+	// 1-5: common little wave
+	if rand.Intn(6) == 0 {
+		// slope in [-1, -0.4] U [0.4, 1]
+		// generate random number in range [0, 1.2]
+		// if in [0, 0.6] then negative, otherwise positive
+		rnd := randFloat64InRange(0, 1.2)
+		if rnd <= 0.6 {
+			act.waveCurSlope = -0.4 - rnd
+		} else {
+			act.waveCurSlope = 0.4 + (rnd - 0.6)
+		}
+
+		// from 15 to 35 seconds, faster than usual
+		// act.waveNumSegments = randIntInRange(15, 35)
+		act.waveNumSegments = randIntInRange(60, 180)
+	} else {
+		// slope in [-0.5, 0.5]
+		act.waveCurSlope = randFloat64InRange(-0.5, 0.5)
+
+		// from 50 to 90 seconds
+		// act.waveNumSegments = randIntInRange(50, 90)
+		act.waveNumSegments = randIntInRange(180, 300)
+	}
+
+	// fmt.Printf("generated wave: num=%d slope=%v\n", act.waveNumSegments, act.waveCurSlope)
+
+	act.waveIndex = 0
+}
+
+// perlin-wave-like
+func (act *StravaActivity) getCurrentWaveSpeed() float64 {
+	fraction := float64(act.waveIndex) / float64(act.waveNumSegments)
+	loPos := act.wavePrevSlope * fraction
+	hiPos := -act.waveCurSlope * (1 - fraction)
+	curve := fraction * fraction * (3.0 - 2.0*fraction)
+	speedMod := (loPos * (1 - curve)) + (hiPos * curve)
+	return act.desiredSpeed + speedMod*act.maxPossibleSpeedAmplitude
+}
+
+func recordBetweenRecords(a, b *Record, fraction float64) *Record {
+	altitude := a.Altitude + (b.Altitude-a.Altitude)*fraction
+
+	// https://stackoverflow.com/questions/33907276/calculate-point-between-two-coordinates-based-on-a-percentage
+	lat1, lon1 := degToRad(a.Lat), degToRad(a.Lon)
+	lat2, lon2 := degToRad(b.Lat), degToRad(b.Lon)
+
+	deltaLat := lat2 - lat1
+	deltaLon := lon2 - lon1
+
+	calcA := math.Sin(deltaLat/2)*math.Sin(deltaLat/2) +
+		math.Cos(lat1)*math.Cos(lat2)*math.Sin(deltaLon/2)*math.Sin(deltaLon/2)
+	calcB := 2 * math.Atan2(math.Sqrt(calcA), math.Sqrt(1-calcA))
+
+	A := math.Sin((1-fraction)*calcB) / math.Sin(calcB)
+	B := math.Sin(fraction*calcB) / math.Sin(calcB)
+
+	x := A*math.Cos(lat1)*math.Cos(lon1) + B*math.Cos(lat2)*math.Cos(lon2)
+	y := A*math.Cos(lat1)*math.Sin(lon1) + B*math.Cos(lat2)*math.Sin(lon2)
+	z := A*math.Sin(lat1) + B*math.Sin(lat2)
+
+	lat3 := math.Atan2(z, math.Sqrt(x*x+y*y))
+	lon3 := math.Atan2(y, x)
+
+	lat, lon := radToDeg(lat3), radToDeg(lon3)
+	return &Record{
+		Lat:      lat,
+		Lon:      lon,
+		Altitude: altitude,
+	}
+}
+
+func (act *StravaActivity) addNewRecord(next *Record) (reached bool) {
+	if act.waveIndex == act.waveNumSegments {
+		act.generateNewWave()
+	}
+
+	var (
+		prevActRecord = act.activityRecords[len(act.activityRecords)-1]
+		nextActRecord *activityRecord
+	)
+
+	distBetweenRecs := distanceBetweenCoords(prevActRecord.lat, prevActRecord.lon, next.Lat, next.Lon)
+	curSpeed := act.getCurrentWaveSpeed()
+	distanceTraveledIn1Second := curSpeed / 3600
+
+	// fmt.Println("    cur speed =", curSpeed)
+	// fmt.Println("    dist in 1 sec =", distanceTraveledIn1Second)
+
+	if distanceTraveledIn1Second >= distBetweenRecs {
+		// if we reach the point, simply add it to the records
+		reached = true
+		nextActRecord = &activityRecord{
+			lat:      next.Lat,
+			lon:      next.Lon,
+			altitude: next.Altitude,
+			distance: prevActRecord.distance + distBetweenRecs,
+			timestamp: prevActRecord.timestamp.Add(time.Duration(
+				float64(time.Hour) * (distBetweenRecs / curSpeed),
+			)),
+		}
+	} else {
+		// otherwise calculate the point values
+		reached = false
+		fraction := distanceTraveledIn1Second / distBetweenRecs
+		record := recordBetweenRecords(&Record{
+			Lat:      prevActRecord.lat,
+			Lon:      prevActRecord.lon,
+			Altitude: prevActRecord.altitude,
+		}, next, fraction)
+		nextActRecord = &activityRecord{
+			lat:       record.Lat,
+			lon:       record.Lon,
+			altitude:  record.Altitude,
+			distance:  prevActRecord.distance + distanceTraveledIn1Second,
+			timestamp: prevActRecord.timestamp.Add(time.Second),
+		}
+	}
+	nextActRecord.speed = curSpeed
+
+	// fmt.Println("    adding intermediate record ", nextActRecord)
+
+	// append new record and update stats
+	act.activityRecords = append(act.activityRecords, nextActRecord)
+	act.totalActiveTime = nextActRecord.timestamp.Sub(act.startTime)
+	act.totalDistance = nextActRecord.distance
+
+	// increase index in current wave
+	act.waveIndex++
+	return
+}
+
 // TODO first and last record mustt have speed close to zero
 // TODO generate records properly
-func (act *StravaActivity) AddRecord(record Record) error {
+func (act *StravaActivity) AddRecord(record *Record) error {
 	if record.Lat < -90 || record.Lat > 90 {
 		return errors.New("record latitude isn't in bounds")
 	}
@@ -136,60 +326,23 @@ func (act *StravaActivity) AddRecord(record Record) error {
 		return errors.New("record altitude is below sea level")
 	}
 
-	// create new activity record based on parameters
-	// currently the speed is constantly set to the desired one
-	actRecord := &activityRecord{
-		lat:      record.Lat,
-		lon:      record.Lon,
-		altitude: record.Altitude,
-		speed:    act.desiredSpeed,
-	}
-
+	// fmt.Println("Adding record", record)
 	if len(act.activityRecords) > 0 {
-		// set distance using previous record
-		// this should actually depend on speed+time in the future
-		// (speed * 1sec), not time depending on distance like now
-		prevActRecord := act.activityRecords[len(act.activityRecords)-1]
-		distanceMoved := distanceBetweenCoords(
-			prevActRecord.lat, prevActRecord.lon, actRecord.lat, actRecord.lon,
-		)
-
-		// currently calculating time based on distance and speed
-		// should be constantly 1s
-		actRecord.timestamp = prevActRecord.timestamp.Add(time.Duration(
-			float64(time.Hour) * (distanceMoved / actRecord.speed),
-		))
-		actRecord.distance = prevActRecord.distance + distanceMoved
+		reached := false
+		for !reached {
+			reached = act.addNewRecord(record)
+		}
 	} else {
-		actRecord.timestamp = act.startTime
-		actRecord.distance = 0
+		act.activityRecords = append(act.activityRecords, &activityRecord{
+			lat:       record.Lat,
+			lon:       record.Lon,
+			altitude:  record.Altitude,
+			timestamp: act.startTime,
+			distance:  0,
+			speed:     act.desiredSpeed,
+		})
 	}
-
-	act.activityRecords = append(act.activityRecords, actRecord)
-	act.totalActiveTime = actRecord.timestamp.Sub(act.startTime)
-	act.totalDistance = actRecord.distance
 	return nil
-}
-
-// haversin(θ) function
-func hsin(theta float64) float64 {
-	return math.Pow(math.Sin(theta/2), 2)
-}
-
-// http://en.wikipedia.org/wiki/Haversine_formula
-func distanceBetweenCoords(lat1, lon1, lat2, lon2 float64) float64 {
-	var la1, lo1, la2, lo2, earthRadiusM float64
-	la1 = lat1 * math.Pi / 180
-	lo1 = lon1 * math.Pi / 180
-	la2 = lat2 * math.Pi / 180
-	lo2 = lon2 * math.Pi / 180
-
-	earthRadiusM = 6378100
-
-	// calculate
-	h := hsin(la2-la1) + math.Cos(la1)*math.Cos(la2)*hsin(lo2-lo1)
-
-	return 2 * earthRadiusM * math.Asin(math.Sqrt(h)) / 1000
 }
 
 // activityRecord represents a single record of an activity
@@ -200,6 +353,13 @@ type activityRecord struct {
 	altitude  float64
 	speed     float64
 	distance  float64
+}
+
+func (rec *activityRecord) String() string {
+	return fmt.Sprintf("@%d:%d:%d.%v: lat=%v lon=%v alt=%v speed=%v distance=%v",
+		rec.timestamp.Hour(), rec.timestamp.Minute(), rec.timestamp.Second(), rec.timestamp.Nanosecond(),
+		rec.lat, rec.lon, rec.altitude, rec.speed, rec.distance,
+	)
 }
 
 const (
