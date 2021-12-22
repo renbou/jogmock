@@ -46,8 +46,8 @@ func Execute() error {
 
 func init() {
 	rootCmd.Flags().StringVar(&activityType, "activity", "", "either run or ride")
-	rootCmd.Flags().StringVar(&activityType, "name", "", "name of the activity")
-	rootCmd.Flags().StringVar(&activityType, "description", "", "description of the activity")
+	rootCmd.Flags().StringVar(&activityName, "name", "", "name of the activity")
+	rootCmd.Flags().StringVar(&activityDescription, "description", "", "description of the activity")
 	rootCmd.Flags().IntVar(&startTime, "start", 0, "start time in unix format")
 	rootCmd.Flags().Float64Var(&desiredSpeed, "speed", 0.0, "desired average speed")
 	rootCmd.Flags().StringVar(&gpxFilePath, "gpx", "", "path to gpx file with route")
@@ -169,11 +169,13 @@ func sendActivity(fitFile *fit.FitFile) error {
 	} else {
 		workoutType = 12
 	}
-	metadataBytes, err := json.Marshal(map[string]interface{}{
-		"activity_name":             "New activity",
+	metadataBuffer := new(bytes.Buffer)
+	metadataEncoder := json.NewEncoder(metadataBuffer)
+	err = metadataEncoder.Encode(map[string]interface{}{
+		"activity_name":             activityName,
 		"activity_type":             activityType,
 		"commute":                   false,
-		"description":               "New description",
+		"description":               activityDescription,
 		"heartrate_opt_out":         false,
 		"perceived_exertion":        4,
 		"photo_ids":                 []string{},
@@ -197,7 +199,7 @@ func sendActivity(fitFile *fit.FitFile) error {
 
 	resp, err := client.R().
 		SetFileReader("file", randomActivityId+"-activity.fit", activityBuffer).
-		SetMultipartField("metadata", "", "application/json", bytes.NewBuffer(metadataBytes)).
+		SetMultipartField("metadata", "", "application/json", metadataBuffer).
 		SetHeader("Authorization", "access_token "+token).
 		Post("https://cdn-1.strava.com/api/v3/uploads/internal_fit?session_id=" + randomActivityId + "&hl=en")
 	if err != nil {
