@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
-	"mime/multipart"
 	"net/http"
-	"net/textproto"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 
 	"github.com/google/uuid"
 	"github.com/renbou/strava-keker/pkg/encoding"
@@ -24,12 +23,14 @@ import (
 )
 
 var (
-	gpxFilePath    string
-	desiredSpeed   float64
-	activityType   string
-	startTime      int
-	stravaEmail    string
-	stravaPassword string
+	gpxFilePath         string
+	desiredSpeed        float64
+	activityType        string
+	activityName        string
+	activityDescription string
+	startTime           int
+	stravaEmail         string
+	stravaPassword      string
 )
 
 var rootCmd = &cobra.Command{
@@ -45,6 +46,8 @@ func Execute() error {
 
 func init() {
 	rootCmd.Flags().StringVar(&activityType, "activity", "", "either run or ride")
+	rootCmd.Flags().StringVar(&activityType, "name", "", "name of the activity")
+	rootCmd.Flags().StringVar(&activityType, "description", "", "description of the activity")
 	rootCmd.Flags().IntVar(&startTime, "start", 0, "start time in unix format")
 	rootCmd.Flags().Float64Var(&desiredSpeed, "speed", 0.0, "desired average speed")
 	rootCmd.Flags().StringVar(&gpxFilePath, "gpx", "", "path to gpx file with route")
@@ -52,6 +55,8 @@ func init() {
 	rootCmd.Flags().StringVar(&stravaPassword, "password", "", "your password for strava")
 
 	rootCmd.MarkFlagRequired("activity")
+	rootCmd.MarkFlagRequired("name")
+	rootCmd.MarkFlagRequired("description")
 	rootCmd.MarkFlagRequired("start")
 	rootCmd.MarkFlagRequired("speed")
 	rootCmd.MarkFlagRequired("gpx")
@@ -101,8 +106,12 @@ func run(cmd *cobra.Command, args []string) {
 	log.Print("[+] activity uploaded, check your strava!")
 }
 
+type TokenResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
 func sendActivity(fitFile *fit.FitFile) error {
-	client := http.DefaultClient
+	client := resty.New()
 
 	// get an authorization token first, either from cache or a new one
 	var token string
@@ -113,83 +122,45 @@ func sendActivity(fitFile *fit.FitFile) error {
 		}
 		token = string(tokenBytes)
 	} else {
-		tokenRequestBytes, err := json.Marshal(map[string]interface{}{
-			"client_id":        2,
-			"client_secret":    "3bf7cfbe375675dd9329e9de56d046b4f02a186f",
-			"mobile_device_id": "",
-			"email":            stravaEmail,
-			"email_language":   "en_GB",
-			"password":         stravaPassword,
-		})
-		if err != nil {
-			return err
-		}
-		buffer := bytes.NewBuffer(tokenRequestBytes)
-
-		resp, err := client.Post("https://cdn-1.strava.com/api/v3/oauth/internal/token?hl=en",
-			"application/json",
-			buffer,
-		)
-		if err != nil {
-			return err
-		}
-		builder := new(bytes.Buffer)
-		_, err = io.Copy(builder, resp.Body)
+		resp, err := client.R().
+			SetBody(map[string]interface{}{
+				"client_id":        2,
+				"client_secret":    "3bf7cfbe375675dd9329e9de56d046b4f02a186f",
+				"mobile_device_id": "",
+				"email":            stravaEmail,
+				"email_language":   "en_GB",
+				"password":         stravaPassword,
+			}).
+			SetResult(&TokenResponse{}).
+			Post("https://cdn-1.strava.com/api/v3/oauth/internal/token?hl=en")
 		if err != nil {
 			return err
 		}
 
-		if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode() != http.StatusOK {
 			return fmt.Errorf("authorization failed, server responded with code %d: %s",
-				resp.StatusCode, builder.String(),
+				resp.StatusCode(), resp.String(),
 			)
 		}
 
-		response := map[string]string{}
-		if err := json.Unmarshal(builder.Bytes(), &response); err != nil {
-			return err
-		}
-
-		token = response["access_token"]
-
+		token = resp.Result().(*TokenResponse).AccessToken
 		if err := os.WriteFile(".token-cache", []byte(token), os.ModePerm); err != nil {
 			return err
 		}
 	}
 
 	// now upload the activity
-	buffer := new(bytes.Buffer)
-	encoder := encoding.NewEncoder(buffer, encoding.BigEndian)
+	activityBuffer := new(bytes.Buffer)
+	encoder := encoding.NewEncoder(activityBuffer, encoding.BigEndian)
 	if err := encoder.Encode(fitFile); err != nil {
 		return fmt.Errorf("error while encoding fit file: %v", err)
 	}
-	activityBytes := buffer.Bytes()
 
 	randomActivityUUID, err := uuid.NewRandom()
 	if err != nil {
 		return err
 	}
 	randomActivityId := randomActivityUUID.String()
-
-	// since the request is a multipart we need a writer
-	buffer = new(bytes.Buffer)
-	multipartWriter := multipart.NewWriter(buffer)
-
-	// encode the fit file directly into the multipart writer
-	formFile, err := multipartWriter.CreatePart(textproto.MIMEHeader{
-		"Content-Disposition": []string{
-			"form-data; name=\"file\"; filename=\"" + randomActivityId + "-activity.fit\"",
-		},
-		"Content-Type":   []string{"application/octet-stream"},
-		"Content-Length": []string{strconv.Itoa(len(activityBytes))},
-	})
-	if err != nil {
-		return err
-	}
-	_, err = formFile.Write(activityBytes)
-	if err != nil {
-		return err
-	}
 
 	// and a second part for the metadata
 	var workoutType int
@@ -223,52 +194,21 @@ func sendActivity(fitFile *fit.FitFile) error {
 	if err != nil {
 		return err
 	}
-	formMetadata, err := multipartWriter.CreatePart(textproto.MIMEHeader{
-		"Content-Disposition": []string{"form-data; name=\"metadata\""},
-		"Content-Type":        []string{"application/json; charset=utf-8"},
-		"Content-Length":      []string{strconv.Itoa(len(metadataBytes))},
-	})
-	if err != nil {
-		return err
-	}
-	_, err = formMetadata.Write(metadataBytes)
-	if err != nil {
-		return err
-	}
 
-	multipartWriter.Close()
-
-	if err := os.WriteFile("bebra", buffer.Bytes(), os.ModePerm); err != nil {
-		return err
-	}
-
-	uploadRequest, err := http.NewRequest(
-		"POST",
-		"https://cdn-1.strava.com/api/v3/uploads/internal_fit?session_id="+randomActivityId+"&hl=en",
-		buffer,
-	)
-	if err != nil {
-		return err
-	}
-	uploadRequest.Header.Set("Content-Type", multipartWriter.FormDataContentType())
-	uploadRequest.Header.Set("Authorization", "access_token "+token)
-
-	resp, err := client.Do(uploadRequest)
-	if err != nil {
-		return err
-	}
-	builder := new(bytes.Buffer)
-	_, err = io.Copy(builder, resp.Body)
+	resp, err := client.R().
+		SetFileReader("file", randomActivityId+"-activity.fit", activityBuffer).
+		SetMultipartField("metadata", "", "application/json", bytes.NewBuffer(metadataBytes)).
+		SetHeader("Authorization", "access_token "+token).
+		Post("https://cdn-1.strava.com/api/v3/uploads/internal_fit?session_id=" + randomActivityId + "&hl=en")
 	if err != nil {
 		return err
 	}
 
-	if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode() != http.StatusCreated {
 		return fmt.Errorf("upload failed, server responded with code %d: %s",
-			resp.StatusCode, builder.String(),
+			resp.StatusCode(), resp.String(),
 		)
 	}
-
 	return nil
 }
 
