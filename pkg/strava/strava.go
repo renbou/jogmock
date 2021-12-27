@@ -122,11 +122,11 @@ func NewActivity(options *ActivityOptions) (*StravaActivity, error) {
 		activityRecords: make([]*activityRecord, 0, 64),
 	}
 	if options.ActivityType == StravaActivityTypeRun {
-		// 0.75 km/h
-		activity.maxPossibleSpeedAmplitude = 1.5
+		// 1 km/h
+		activity.maxPossibleSpeedAmplitude = 1
 	} else {
-		// 1.2 km/h
-		activity.maxPossibleSpeedAmplitude = 3
+		// 2 km/h
+		activity.maxPossibleSpeedAmplitude = 2
 	}
 	return activity, nil
 }
@@ -322,8 +322,8 @@ func (act *StravaActivity) AddRecord(record *Record) error {
 	if record.Lon < -180 || record.Lon > 180 {
 		return errors.New("record longitude isn't in bounds")
 	}
-	if record.Altitude < 0 {
-		return errors.New("record altitude is below sea level")
+	if record.Altitude < -12 {
+		return errors.New("record altitude is over 12 meters below the sea level")
 	}
 
 	// fmt.Println("Adding record", record)

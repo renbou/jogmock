@@ -4,108 +4,323 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/go-resty/resty/v2"
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v2"
 
+	"github.com/go-playground/validator/v10"
+	bubblesCommon "github.com/mritd/bubbles/common"
+	bubblesSelector "github.com/mritd/bubbles/selector"
 	"github.com/renbou/strava-keker/pkg/encoding"
 	"github.com/renbou/strava-keker/pkg/fit"
+	bubblesPrompt "github.com/renbou/strava-keker/pkg/prompt"
 	"github.com/renbou/strava-keker/pkg/strava"
 	"github.com/spf13/cobra"
 )
 
 var (
-	gpxFilePath         string
-	desiredSpeed        float64
-	activityType        string
-	activityName        string
-	activityDescription string
-	startTime           int
-	stravaEmail         string
-	stravaPassword      string
-	dontUpload          bool
+	arguments Arguments
+	model     = NewActivityModel()
+	config    *UserConfig
+	rootCmd   = &cobra.Command{
+		Use:   "strava-keker",
+		Short: "strava-keker is a sophisticated strava activity faker",
+		Long:  "a fake strava client built using the knowledge gained from reverse engineering the mobile app",
+		Run:   run,
+	}
+
+	infoStyle = lipgloss.
+			NewStyle().
+			Foreground(lipgloss.Color("2")).
+			Inline(true)
+
+	errorStyle = lipgloss.
+			NewStyle().
+			Foreground(lipgloss.Color("9")).
+			Bold(true).
+			Inline(true)
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "strava-keker",
-	Short: "strava-keker is a sophisticated strava activity faker",
-	Long:  "a fake strava client built using the knowledge gained from reverse engineering the mobile app",
-	Run:   run,
+type UserConfig struct {
+	Email                    string `validate:"required,email"`
+	Password                 string `validate:"required"`
+	internalMobileAppVersion uint32
+	MobileAppVersion         string `yaml:"mobile_app_version" validate:"required"`
+	DeviceManufacturer       string `yaml:"device_manufacturer" validate:"required"`
+	DeviceModel              string `yaml:"device_model" validate:"required"`
+	DeviceOsVersion          int    `yaml:"device_os_version" validate:"required"`
 }
 
-func Execute() error {
-	return rootCmd.Execute()
+// Arguments represents the possible commmand-line arguments
+type Arguments struct {
+	ConfigPath string
+	DontUpload bool
 }
 
-func init() {
-	rootCmd.Flags().StringVar(&activityType, "activity", "", "either run or ride")
-	rootCmd.Flags().StringVar(&activityName, "name", "", "name of the activity")
-	rootCmd.Flags().StringVar(&activityDescription, "description", "", "description of the activity")
-	rootCmd.Flags().IntVar(&startTime, "start", 0, "start time in unix format")
-	rootCmd.Flags().Float64Var(&desiredSpeed, "speed", 0.0, "desired average speed")
-	rootCmd.Flags().StringVar(&gpxFilePath, "gpx", "", "path to gpx file with route")
-	rootCmd.Flags().StringVar(&stravaEmail, "email", "", "your email login for strava")
-	rootCmd.Flags().StringVar(&stravaPassword, "password", "", "your password for strava")
-	rootCmd.Flags().BoolVar(&dontUpload, "dont", false, "don't actually upload, for testing")
-
-	rootCmd.MarkFlagRequired("activity")
-	rootCmd.MarkFlagRequired("name")
-	rootCmd.MarkFlagRequired("description")
-	rootCmd.MarkFlagRequired("start")
-	rootCmd.MarkFlagRequired("speed")
-	rootCmd.MarkFlagRequired("gpx")
-	rootCmd.MarkFlagRequired("email")
-	rootCmd.MarkFlagRequired("password")
-}
-
-func run(cmd *cobra.Command, args []string) {
-	// validate parameters
-	if activityType != "run" && activityType != "ride" {
-		log.Fatal("[!] activity must be either run or ride")
-	}
-	activityType = strings.Title(activityType)
-
-	// create activity
-	activity, err := strava.NewActivity(&strava.ActivityOptions{
-		AppVersion:         1221988,
-		MobileAppVersion:   "230.10 (1221988)",
-		DeviceManufacturer: "Xiaomi",
-		DeviceModel:        "Redmi Note 9 Pro",
-		DeviceOsVersion:    "10",
-		ActivityType:       strava.StravaActivityType(activityType),
-		StartTime:          time.Unix(int64(startTime), 0),
-		DesiredSpeed:       desiredSpeed,
-	})
+// GetConfig reads and returns the config defined by args
+func (args *Arguments) GetConfig() (*UserConfig, error) {
+	configFile, err := os.Open(args.ConfigPath)
 	if err != nil {
-		log.Fatalf("[!] unable to create activity: %v", err)
+		return nil, err
 	}
-	log.Print("[+] strava activity created")
+	decoder := yaml.NewDecoder(configFile)
 
-	// fill up the activity
-	if err := readGpxIntoActivity(activity, gpxFilePath); err != nil {
-		log.Fatalf("[!] error while converting gpx to strava activity: %v", err)
+	var config UserConfig
+	if err := decoder.Decode(&config); err != nil {
+		return nil, err
 	}
-	log.Print("[+] gpx successfully converted to strava activity")
+	validator := validator.New()
+	if err := validator.Struct(config); err != nil {
+		return nil, err
+	}
 
-	// construct the fit file for the activity
-	fitFile, err := activity.BuildFitFile()
+	var publicMobileVer float64
+	var internalMobileVer uint32
+	if _, err := fmt.Sscanf(config.MobileAppVersion, "%f (%d)", &publicMobileVer, &internalMobileVer); err != nil {
+		return nil, err
+	}
+	config.internalMobileAppVersion = internalMobileVer
+
+	return &config, nil
+}
+
+type ActivityModel struct {
+	gpxFilePath         string
+	activityType        strava.StravaActivityType
+	activityName        string
+	activityDescription string
+	startTime           time.Time
+	desiredSpeed        float64
+	selector            *bubblesSelector.Model
+	prompt              *bubblesPrompt.Model
+	inputIndex          int
+	failedInput         bool
+}
+
+func pathExists(path string) error {
+	_, path = userExpand(path)
+	stat, err := os.Stat(path)
 	if err != nil {
-		log.Fatalf("[!] error while building the fit file for the activity: %v", err)
+		return err
 	}
-	log.Print("[+] activity built into fit file")
+	if stat.IsDir() {
+		return errors.New("path is a directory")
+	}
+	return nil
+}
 
-	if err := sendActivity(fitFile); err != nil {
-		log.Fatalf("[!] error while sending fit file: %v", err)
+func NewActivityModel() *ActivityModel {
+	return &ActivityModel{
+		inputIndex: 0,
+		prompt: &bubblesPrompt.Model{
+			Prompt:       bubblesCommon.FontColor("Input path to GPX file: ", bubblesPrompt.ColorPrompt),
+			ValidateFunc: pathExists,
+		},
 	}
-	log.Print("[+] activity uploaded, check your strava!")
+}
+
+func strToTimestamp(val string) (time.Time, error) {
+	t, err := time.Parse("02.01.2006 15:04:05", val)
+	return t.Local(), err
+}
+
+func strIsTime(val string) error {
+	if val == "" {
+		return errors.New("input time as DD.MM.YYYY HH:MM:SS")
+	}
+	_, err := strToTimestamp(val)
+	if err != nil {
+		return errors.New("input time as DD.MM.YYYY HH:MM:SS, error: " + err.Error())
+	}
+	return err
+}
+
+func (m *ActivityModel) Init() tea.Cmd {
+	return nil
+}
+
+// returns true if the path was expanded
+func userExpand(path string) (bool, string) {
+	if path == "" {
+		return false, ""
+	}
+	usr, _ := user.Current()
+	if path[0] == '~' {
+		// expand the path
+		path = filepath.Join(usr.HomeDir, path[1:])
+		return true, path
+	}
+	return false, path
+}
+
+func autoSuggestFile(path string) string {
+	usr, _ := user.Current()
+	wasExpanded, path := userExpand(path)
+
+	// get directory and expand
+	directory := filepath.Dir(path)
+	file := filepath.Base(path)
+	if file == "" {
+		return ""
+	}
+
+	// expand by prefix
+	dirListing, err := os.ReadDir(directory)
+	if err != nil {
+		return ""
+	}
+	for _, dirFile := range dirListing {
+		if strings.HasPrefix(dirFile.Name(), file) {
+			suggested := filepath.Join(directory, dirFile.Name())
+			if dirFile.IsDir() {
+				suggested += "/"
+			}
+			if wasExpanded {
+				suggested = suggested[len(usr.HomeDir):]
+				suggested = "~" + suggested
+			}
+			return suggested
+		}
+	}
+	return ""
+}
+
+var updateViewMsg tea.Msg = "UPDATE_VIEW"
+
+func updateView() tea.Msg {
+	return updateViewMsg
+}
+
+func (m *ActivityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// if entering tab and we are currently reading file, autosuggest it
+	if key, ok := msg.(tea.KeyMsg); ok && key.Type == tea.KeyTab && m.inputIndex == 0 {
+		if suggest := autoSuggestFile(m.prompt.Value()); suggest != "" {
+			m.prompt.Err = m.prompt.ValidateFunc(suggest)
+			m.prompt.Input.SetValue(suggest)
+			m.prompt.Input.SetCursor(len(suggest))
+			return m, nil
+		}
+	}
+	// otherwise if simply reading values
+	switch msg {
+	case updateViewMsg:
+		return m, tea.Quit
+	case bubblesCommon.DONE:
+		switch m.inputIndex {
+		case 0:
+			_, m.gpxFilePath = userExpand(m.prompt.Value())
+			m.prompt = nil
+			m.selector = &bubblesSelector.Model{
+				Data: []interface{}{
+					strava.StravaActivityTypeRun,
+					strava.StravaActivityTypeRide,
+				},
+				HeaderFunc:     bubblesSelector.DefaultHeaderFuncWithAppend("Select activity type:"),
+				SelectedFunc:   bubblesSelector.DefaultSelectedFuncWithIndex("[%d]"),
+				UnSelectedFunc: bubblesSelector.DefaultUnSelectedFuncWithIndex(" %d."),
+				FooterFunc: func(m bubblesSelector.Model, obj interface{}, gdIndex int) string {
+					return ""
+				},
+			}
+		case 1:
+			m.activityType = m.selector.Selected().(strava.StravaActivityType)
+			m.selector = nil
+			m.prompt = &bubblesPrompt.Model{
+				Prompt:       bubblesCommon.FontColor("Input activity name: ", bubblesPrompt.ColorPrompt),
+				ValidateFunc: bubblesPrompt.VFNotBlank,
+			}
+		case 2:
+			m.activityName = m.prompt.Value()
+			m.prompt = &bubblesPrompt.Model{
+				Prompt: bubblesCommon.FontColor("Input activity description: ", bubblesPrompt.ColorPrompt),
+			}
+		case 3:
+			m.activityDescription = m.prompt.Value()
+			m.prompt = &bubblesPrompt.Model{
+				Prompt:       bubblesCommon.FontColor("Input activity start time (DD.MM.YYYY HH:MM:SS): ", bubblesPrompt.ColorPrompt),
+				ValidateFunc: strIsTime,
+			}
+		case 4:
+			m.startTime, _ = strToTimestamp(m.prompt.Value())
+			m.prompt = &bubblesPrompt.Model{
+				Prompt: bubblesCommon.FontColor("Input desired speed as float: ", bubblesPrompt.ColorPrompt),
+				ValidateFunc: func(val string) error {
+					_, err := strconv.ParseFloat(val, 64)
+					return err
+				},
+			}
+		case 5:
+			m.desiredSpeed, _ = strconv.ParseFloat(m.prompt.Value(), 64)
+		}
+		m.inputIndex++
+
+		// print view once after we are done
+		if m.inputIndex == 6 {
+			return m, updateView
+		}
+	}
+
+	var cmd tea.Cmd
+	if m.prompt != nil {
+		_, cmd = m.prompt.Update(msg)
+		if m.prompt.Canceled() {
+			log.Println(errorStyle.Render("[!] Input required"))
+			m.failedInput = true
+			return m, tea.Quit
+		}
+	} else {
+		_, cmd = m.selector.Update(msg)
+		if m.selector.Canceled() {
+			log.Println(errorStyle.Render("[!] Input required"))
+			m.failedInput = true
+			return m, tea.Quit
+		}
+	}
+	return m, cmd
+}
+
+func (m *ActivityModel) View() string {
+	var view string
+	if m.inputIndex > 0 {
+		view += infoStyle.Render("[+] GPX file: ") + m.gpxFilePath + "\n"
+	}
+	if m.inputIndex > 1 {
+		view += infoStyle.Render("[+] Activity type: ") + string(m.activityType) + "\n"
+	}
+	if m.inputIndex > 2 {
+		view += infoStyle.Render("[+] Activity name: ") + m.activityName + "\n"
+	}
+	if m.inputIndex > 3 {
+		view += infoStyle.Render("[+] Activity description: ") + m.activityDescription + "\n"
+	}
+	if m.inputIndex > 4 {
+		view += infoStyle.Render("[+] Start time: ") + m.startTime.Format("02.01.2006 15:04:05") + "\n"
+	}
+	if m.inputIndex > 5 {
+		view += infoStyle.Render("[+] Desired speed: ") + strconv.FormatFloat(m.desiredSpeed, 'f', 5, 64) + "\n"
+	}
+	if m.inputIndex < 6 {
+		if m.prompt != nil {
+			view += m.prompt.View()
+		} else {
+			view += m.selector.View()
+		}
+	}
+	return view
 }
 
 type TokenResponse struct {
@@ -129,9 +344,9 @@ func sendActivity(fitFile *fit.FitFile) error {
 				"client_id":        2,
 				"client_secret":    "3bf7cfbe375675dd9329e9de56d046b4f02a186f",
 				"mobile_device_id": "",
-				"email":            stravaEmail,
+				"email":            config.Email,
 				"email_language":   "en_GB",
-				"password":         stravaPassword,
+				"password":         config.Password,
 			}).
 			SetResult(&TokenResponse{}).
 			Post("https://cdn-1.strava.com/api/v3/oauth/internal/token?hl=en")
@@ -166,7 +381,7 @@ func sendActivity(fitFile *fit.FitFile) error {
 
 	// and a second part for the metadata
 	var workoutType int
-	if activityType == "Run" {
+	if model.activityType == strava.StravaActivityTypeRun {
 		workoutType = 3
 	} else {
 		workoutType = 12
@@ -174,10 +389,10 @@ func sendActivity(fitFile *fit.FitFile) error {
 	metadataBuffer := new(bytes.Buffer)
 	metadataEncoder := json.NewEncoder(metadataBuffer)
 	err = metadataEncoder.Encode(map[string]interface{}{
-		"activity_name":             activityName,
-		"activity_type":             activityType,
+		"activity_name":             model.activityName,
+		"activity_type":             model.activityType,
 		"commute":                   false,
-		"description":               activityDescription,
+		"description":               model.activityDescription,
 		"heartrate_opt_out":         false,
 		"perceived_exertion":        4,
 		"photo_ids":                 []string{},
@@ -199,7 +414,7 @@ func sendActivity(fitFile *fit.FitFile) error {
 		return err
 	}
 
-	if dontUpload {
+	if arguments.DontUpload {
 		return nil
 	}
 
@@ -287,8 +502,64 @@ type TrackPart struct {
 	Elevation float64  `xml:"ele"`
 }
 
+func run(cmd *cobra.Command, args []string) {
+	var err error
+
+	// read config then read input params
+	if config, err = arguments.GetConfig(); err != nil {
+		log.Fatal(errorStyle.Render("[!] Unable to read config: " + err.Error()))
+	}
+	prog := tea.NewProgram(model)
+	if err := prog.Start(); err != nil {
+		log.Fatal(errorStyle.Render("[!] Error while getting input: " + err.Error()))
+	}
+	if model.failedInput {
+		return
+	}
+
+	// create activity
+	activity, err := strava.NewActivity(&strava.ActivityOptions{
+		AppVersion:         config.internalMobileAppVersion,
+		MobileAppVersion:   config.MobileAppVersion,
+		DeviceManufacturer: config.DeviceManufacturer,
+		DeviceModel:        config.DeviceModel,
+		DeviceOsVersion:    strconv.Itoa(config.DeviceOsVersion),
+		ActivityType:       model.activityType,
+		StartTime:          model.startTime,
+		DesiredSpeed:       model.desiredSpeed,
+	})
+	if err != nil {
+		log.Fatal(errorStyle.Render("[!] Unable to create activity: " + err.Error()))
+	}
+	log.Println(infoStyle.Render("[+] Strava activity created"))
+
+	// fill up the activity
+	if err := readGpxIntoActivity(activity, model.gpxFilePath); err != nil {
+		log.Fatal(errorStyle.Render("[!] Error while converting gpx to strava activity: ") + err.Error())
+	}
+	log.Println(infoStyle.Render("[+] GPX successfully converted to strava activity"))
+
+	// construct the fit file for the activity
+	fitFile, err := activity.BuildFitFile()
+	if err != nil {
+		log.Fatal(errorStyle.Render("[!] Error while building the fit file for the activity: " + err.Error()))
+	}
+	log.Println(infoStyle.Render("[+] Activity built into fit file"))
+
+	if err := sendActivity(fitFile); err != nil {
+		log.Fatal(errorStyle.Render("[!] Error while sending fit file: " + err.Error()))
+	}
+	log.Println(infoStyle.Render("[+] Activity uploaded, check your strava!"))
+}
+
+func init() {
+	rootCmd.Flags().StringVar(&arguments.ConfigPath, "config", "config.yml", "path to config file")
+	rootCmd.Flags().BoolVar(&arguments.DontUpload, "no-upload", false, "don't upload the generated activity (for debug)")
+	log.SetFlags(0)
+}
+
 func main() {
-	if err := Execute(); err != nil {
-		fmt.Println(err)
+	if err := rootCmd.Execute(); err != nil {
+		log.Fatal(errorStyle.Render("[!] Error running the app: " + err.Error()))
 	}
 }
