@@ -1,6 +1,6 @@
 // Copyright 2021 Artem Mikheev
 
-package strava
+package stravafit
 
 import (
 	"github.com/renbou/jogmock/fit-encoder/fit"
@@ -39,19 +39,19 @@ func getFileIdMessageDefinition() (*fit.DefinitionMessage, error) {
 }
 
 func getDeviceInfoMessageDefinition(act *StravaActivity, dev *devData) (*fit.DefinitionMessage, error) {
-	mobileAppVersionDevField, err := dev.getFieldDefinition("mobile_app_version", len(act.mobileAppVersion))
+	mobileAppVersionDevField, err := dev.getFieldDefinition("mobile_app_version", len(act.MobileAppVersion))
 	if err != nil {
 		return nil, err
 	}
-	deviceManufacturerDevField, err := dev.getFieldDefinition("device_manufacturer", len(act.deviceManufacturer))
+	deviceManufacturerDevField, err := dev.getFieldDefinition("device_manufacturer", len(act.DeviceManufacturer))
 	if err != nil {
 		return nil, err
 	}
-	deviceModelDevField, err := dev.getFieldDefinition("device_model", len(act.deviceModel))
+	deviceModelDevField, err := dev.getFieldDefinition("device_model", len(act.DeviceModel))
 	if err != nil {
 		return nil, err
 	}
-	deviceOsVersion, err := dev.getFieldDefinition("device_os_version", len(act.deviceOsVersion))
+	deviceOsVersion, err := dev.getFieldDefinition("device_os_version", len(act.DeviceOsVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func getSessionMessageDefinition(act *StravaActivity, dev *devData) (*fit.Defini
 	if err != nil {
 		return nil, err
 	}
-	activityTypeDevField, err := dev.getFieldDefinition("activity_type", len(act.activityType))
+	activityTypeDevField, err := dev.getFieldDefinition("activity_type", len(ActivityTypeToString(act.Activity.Type())))
 	if err != nil {
 		return nil, err
 	}

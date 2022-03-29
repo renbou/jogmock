@@ -1,6 +1,6 @@
 // Copyright 2021 Artem Mikheev
 
-package strava
+package stravafit
 
 import (
 	"errors"
