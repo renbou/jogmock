@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/renbou/jogmock/fit-encoder/encoding"
-	"github.com/renbou/jogmock/fit-encoder/hash/crc16"
+	"github.com/renbou/jogmock/fit-encoder/internal/hash/crc16"
 )
 
 // FitFile stores sequential definition and data messages

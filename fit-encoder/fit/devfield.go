@@ -8,7 +8,7 @@ import (
 
 	"github.com/renbou/jogmock/fit-encoder/encoding"
 	"github.com/renbou/jogmock/fit-encoder/fit/types"
-	"github.com/renbou/jogmock/fit-encoder/io/maybe"
+	"github.com/renbou/jogmock/fit-encoder/internal/maybeio"
 )
 
 // DeveloperDataIdStub is a struct representing only the "required" part
@@ -50,7 +50,7 @@ func (devFieldDef *DevFieldDefinition) Encode(wr io.Writer, endianness encoding.
 	if err := devFieldDef.validate(); err != nil {
 		return err
 	}
-	mwr := &maybe.Writer{Writer: wr}
+	mwr := maybeio.NewWriter(wr)
 	devFieldDef.Field.DefNum.Encode(mwr, endianness)
 	devFieldDef.Size.Encode(mwr, endianness)
 	devFieldDef.DevId.DevDataIndex.Encode(mwr, endianness)

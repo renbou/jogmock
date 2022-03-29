@@ -9,7 +9,7 @@ import (
 
 	"github.com/renbou/jogmock/fit-encoder/encoding"
 	"github.com/renbou/jogmock/fit-encoder/fit/types"
-	"github.com/renbou/jogmock/fit-encoder/io/maybe"
+	"github.com/renbou/jogmock/fit-encoder/internal/maybeio"
 )
 
 const (
@@ -75,7 +75,7 @@ func (localDefMsg *localDefinitionMessage) Encode(wr io.Writer, endianness encod
 		return encoding.ErrUnknownEndianness
 	}
 
-	mwr := &maybe.Writer{Writer: wr}
+	mwr := maybeio.NewWriter(wr)
 
 	// Encode the single-byte message header
 	encodeMessageHeader(mwr, defMsgType, len(localDefMsg.def.DevFieldDefs) > 0, localDefMsg.localMsgType)
@@ -193,7 +193,7 @@ func (localDataMsg *localDataMessage) Encode(wr io.Writer, endianness encoding.E
 		return encoding.ErrUnknownEndianness
 	}
 
-	mwr := &maybe.Writer{Writer: wr}
+	mwr := maybeio.NewWriter(wr)
 
 	// Encode the single-byte message header
 	encodeMessageHeader(mwr, dataMsgType, false, localDataMsg.localMsgType)

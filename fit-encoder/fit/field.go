@@ -9,7 +9,7 @@ import (
 
 	"github.com/renbou/jogmock/fit-encoder/encoding"
 	"github.com/renbou/jogmock/fit-encoder/fit/types"
-	"github.com/renbou/jogmock/fit-encoder/io/maybe"
+	"github.com/renbou/jogmock/fit-encoder/internal/maybeio"
 )
 
 type FieldDefinition struct {
@@ -46,7 +46,7 @@ func (fieldDef *FieldDefinition) Encode(wr io.Writer, endianness encoding.Endian
 	if err := fieldDef.validate(); err != nil {
 		return err
 	}
-	mwr := &maybe.Writer{Writer: wr}
+	mwr := maybeio.NewWriter(wr)
 	fieldDef.DefNum.Encode(mwr, endianness)
 	fieldDef.Size.Encode(mwr, endianness)
 	fieldDef.BaseType.Encode(mwr, endianness)
