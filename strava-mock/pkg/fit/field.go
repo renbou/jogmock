@@ -31,10 +31,10 @@ func (fieldDef *FieldDefinition) validate() error {
 			return errors.New("field definition size with base string type must be at least 1")
 		}
 	} else {
-		if properSize, ok := types.FitTypeSize[fieldDef.BaseType]; !ok {
-			return fmt.Errorf("field definition specifies base type %v for which valid size is unknown",
-				fieldDef.BaseType)
-		} else if properSize != fieldDef.Size {
+		// we already check that the type is known at the beginning,
+		// and the only type without a "known" size should be a string
+		properSize := types.FitTypeSize[fieldDef.BaseType]
+		if properSize != fieldDef.Size {
 			return fmt.Errorf("field definition with base type %v has unexpected size %v (instead of %v)",
 				fieldDef.BaseType, fieldDef.Size, properSize)
 		}

@@ -8,9 +8,12 @@ import (
 
 	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
 	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFitFileEncoding(t *testing.T) {
+	a := assert.New(t)
+
 	fitFile := new(FitFile)
 
 	fileIdMsgDef := &DefinitionMessage{
@@ -52,5 +55,5 @@ func TestFitFileEncoding(t *testing.T) {
 	fitFileBytes, _ := hex.DecodeString(
 		"0e2054081c0000002e464954b8884000010000040102840202840001000404860001090066043c0e2f3ede5f",
 	)
-	encodeAndValidate(t, fitFile, encoding.BigEndian, true, fitFileBytes)
+	encodeAndValidate(a, fitFile, encoding.BigEndian, true, fitFileBytes)
 }

@@ -8,9 +8,14 @@ import (
 
 	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
 	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMessageEncoding(t *testing.T) {
+	a := assert.New(t)
+	r := require.New(t)
+
 	fileIdMsgDef := &DefinitionMessage{
 		GlobalMsgNum: 0,
 		FieldDefs: []*FieldDefinition{
@@ -39,15 +44,13 @@ func TestMessageEncoding(t *testing.T) {
 	}
 
 	localFileIdMsgDef := fileIdMsgDef.ConstructLocalMessage(0)
-	encodeAndValidate(t, localFileIdMsgDef, encoding.BigEndian, true, []byte{
+	encodeAndValidate(a, localFileIdMsgDef, encoding.BigEndian, true, []byte{
 		0x40, 0x00, 0x01, 0x00, 0x00, 0x04, 0x01, 0x02, 0x84, 0x02, 0x02, 0x84, 0x00, 0x01, 0x00, 0x04, 0x04, 0x86,
 	})
 
 	localFileIdMsg, err := localFileIdMsgDef.ConstructData(265, 102, 4, 1007562558)
-	if err != nil {
-		t.Fatalf("Unexpected error during data construction for file id: %v", err)
-	}
-	encodeAndValidate(t, localFileIdMsg, encoding.BigEndian, true, []byte{
+	r.NoError(err, "construction of valid file id")
+	encodeAndValidate(a, localFileIdMsg, encoding.BigEndian, true, []byte{
 		0x00, 0x01, 0x09, 0x00, 0x66, 0x04, 0x3C, 0x0E, 0x2F, 0x3E,
 	})
 
@@ -69,15 +72,13 @@ func TestMessageEncoding(t *testing.T) {
 	}
 
 	localDeveloperDataIdMsgDef := developerDataIdMsgDef.ConstructLocalMessage(0)
-	encodeAndValidate(t, localDeveloperDataIdMsgDef, encoding.BigEndian, true, []byte{
+	encodeAndValidate(a, localDeveloperDataIdMsgDef, encoding.BigEndian, true, []byte{
 		0x40, 0x00, 0x01, 0x00, 0xCF, 0x02, 0x03, 0x01, 0x02, 0x04, 0x04, 0x86,
 	})
 
 	localDeveloperDataIdMsg, err := localDeveloperDataIdMsgDef.ConstructData(0, 1221988)
-	if err != nil {
-		t.Fatalf("Unexpected error during data construction for developer data id: %v", err)
-	}
-	encodeAndValidate(t, localDeveloperDataIdMsg, encoding.BigEndian, true, []byte{
+	r.NoError(err, "construction of valid developer data id")
+	encodeAndValidate(a, localDeveloperDataIdMsg, encoding.BigEndian, true, []byte{
 		0x00, 0x00, 0x00, 0x12, 0xA5, 0x64,
 	})
 
@@ -144,7 +145,7 @@ func TestMessageEncoding(t *testing.T) {
 	}
 
 	localDeviceInfoMsgDef := deviceInfoMsgDef.ConstructLocalMessage(0)
-	encodeAndValidate(t, localDeviceInfoMsgDef, encoding.BigEndian, true, []byte{
+	encodeAndValidate(a, localDeviceInfoMsgDef, encoding.BigEndian, true, []byte{
 		0x60, 0x00, 0x01, 0x00, 0x17, 0x02, 0x02, 0x02, 0x84, 0x04, 0x02, 0x84, 0x04,
 		0x03, 0x11, 0x00, 0x06, 0x07, 0x00, 0x04, 0x11, 0x00, 0x05, 0x03, 0x00,
 	})
@@ -152,20 +153,57 @@ func TestMessageEncoding(t *testing.T) {
 	localDeviceInfoMsg, err := localDeviceInfoMsgDef.ConstructData(
 		265, 102, "230.10 (1221988)", "Xiaomi", "Redmi Note 9 Pro", "10",
 	)
-	if err != nil {
-		t.Fatalf("Unexpected error during data construction for local device info: %v", err)
-	}
+	r.NoError(err, "construction of valid local device id")
 	localDeviceInfoMsgBytes, _ := hex.DecodeString(
 		"00010900663233302E313020283132323139383829005869616F6D69005265646D69204E6F746520392050726F00313000",
 	)
-	encodeAndValidate(t, localDeviceInfoMsg, encoding.BigEndian, true, localDeviceInfoMsgBytes)
+	encodeAndValidate(a, localDeviceInfoMsg, encoding.BigEndian, true, localDeviceInfoMsgBytes)
+
+	// Error tests
+	a.ErrorIs(localDeviceInfoMsgDef.Encode(nil, encoding.Endianness(123)),
+		encoding.ErrUnknownEndianness,
+	)
+	a.ErrorIs(localDeviceInfoMsg.Encode(nil, encoding.Endianness(123)),
+		encoding.ErrUnknownEndianness,
+	)
+
+	_, err = localDeviceInfoMsgDef.ConstructData(types.FitUint16(265))
+	r.Error(err, "construction of invalid local device info (invalid length)")
+
+	_, err = localDeviceInfoMsgDef.ConstructData(
+		types.FitUint16(265), "102",
+		types.FitString("230.10 (1221988)"), types.FitString("Xiaomi"),
+		types.FitString("Redmi Note 9 Pro"), "10",
+	)
+	r.Error(err, "construction of invalid local device info (invalid field types)")
 
 	_, err = localDeviceInfoMsgDef.ConstructData(
 		types.FitUint16(265), types.FitUint16(102),
 		types.FitString("230.10 (1221988)"), types.FitString("Xiaomi"),
 		types.FitString("Redmi Note 9 Pro"), types.FitUint16(1),
 	)
-	if err == nil {
-		t.Fatalf("Expected error during data construction for invalid local device info")
+	r.Error(err, "construction of invalid local device info (invalid def field types)")
+
+	fakeMsgDef := &DefinitionMessage{
+		GlobalMsgNum: 123,
+		FieldDefs: []*FieldDefinition{
+			{
+				DefNum:   3,
+				Size:     4,
+				BaseType: types.FIT_TYPE_INVALID,
+			},
+		},
+		DevFieldDefs: nil,
 	}
+	localFakeMsgDef := fakeMsgDef.ConstructLocalMessage(10)
+	_, err = localFakeMsgDef.ConstructData("invalid fit type")
+	a.Error(err)
+}
+
+func TestInvalidMessageHeader(t *testing.T) {
+	a := assert.New(t)
+
+	a.ErrorIs(encodeMessageHeader(nil, defMsgType, true, 20), ErrInvalidLocalMsgType)
+	a.ErrorIs(encodeMessageHeader(nil, 2, true, 4), ErrInvalidMsgType)
+	a.ErrorIs(encodeMessageHeader(nil, dataMsgType, true, 4), ErrInvalidMsgSpecific)
 }

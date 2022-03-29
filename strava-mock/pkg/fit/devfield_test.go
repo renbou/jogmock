@@ -7,10 +7,13 @@ import (
 
 	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
 	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFitDevFieldDefinitionEncoding(t *testing.T) {
-	encodeAndValidate(t, &DevFieldDefinition{
+	a := assert.New(t)
+
+	encodeAndValidate(a, &DevFieldDefinition{
 		Field: &FieldDescriptionStub{
 			DevDataIndex: 0,
 			DefNum:       0,
@@ -22,7 +25,7 @@ func TestFitDevFieldDefinitionEncoding(t *testing.T) {
 		},
 	}, encoding.BigEndian, true, []byte{0, 8, 0})
 
-	encodeAndValidate(t, &DevFieldDefinition{
+	encodeAndValidate(a, &DevFieldDefinition{
 		Field: &FieldDescriptionStub{
 			DevDataIndex: 1,
 			DefNum:       2,
@@ -34,7 +37,7 @@ func TestFitDevFieldDefinitionEncoding(t *testing.T) {
 		},
 	}, encoding.LittleEndian, true, []byte{2, 2, 1})
 
-	encodeAndValidate(t, &DevFieldDefinition{
+	encodeAndValidate(a, &DevFieldDefinition{
 		Field: &FieldDescriptionStub{
 			DevDataIndex: 1,
 			DefNum:       5,
@@ -46,7 +49,7 @@ func TestFitDevFieldDefinitionEncoding(t *testing.T) {
 		},
 	}, encoding.LittleEndian, false, nil)
 
-	encodeAndValidate(t, &DevFieldDefinition{
+	encodeAndValidate(a, &DevFieldDefinition{
 		Field: &FieldDescriptionStub{
 			DevDataIndex: 3,
 			DefNum:       5,
@@ -58,7 +61,7 @@ func TestFitDevFieldDefinitionEncoding(t *testing.T) {
 		},
 	}, encoding.BigEndian, false, nil)
 
-	encodeAndValidate(t, &DevFieldDefinition{
+	encodeAndValidate(a, &DevFieldDefinition{
 		Field: &FieldDescriptionStub{
 			DevDataIndex: 3,
 			DefNum:       4,
@@ -72,7 +75,9 @@ func TestFitDevFieldDefinitionEncoding(t *testing.T) {
 }
 
 func TestFitDevFieldEncoding(t *testing.T) {
-	encodeAndValidate(t, &DevField{
+	a := assert.New(t)
+
+	encodeAndValidate(a, &DevField{
 		Def: &DevFieldDefinition{
 			Field: &FieldDescriptionStub{
 				DevDataIndex: 0,
@@ -87,7 +92,7 @@ func TestFitDevFieldEncoding(t *testing.T) {
 		Value: types.FitUint64(0),
 	}, encoding.BigEndian, true, []byte{0, 0, 0, 0, 0, 0, 0, 0})
 
-	encodeAndValidate(t, &DevField{
+	encodeAndValidate(a, &DevField{
 		Def: &DevFieldDefinition{
 			Field: &FieldDescriptionStub{
 				DevDataIndex: 0,
@@ -102,7 +107,7 @@ func TestFitDevFieldEncoding(t *testing.T) {
 		Value: types.FitSint32(361549740),
 	}, encoding.BigEndian, true, []byte{0x15, 0x8c, 0xcf, 0xac})
 
-	encodeAndValidate(t, &DevField{
+	encodeAndValidate(a, &DevField{
 		Def: &DevFieldDefinition{
 			Field: &FieldDescriptionStub{
 				DevDataIndex: 1,
@@ -117,7 +122,7 @@ func TestFitDevFieldEncoding(t *testing.T) {
 		Value: types.FitUint16(64),
 	}, encoding.LittleEndian, true, []byte{0x40, 0x00})
 
-	encodeAndValidate(t, &DevField{
+	encodeAndValidate(a, &DevField{
 		Def: &DevFieldDefinition{
 			Field: &FieldDescriptionStub{
 				DevDataIndex: 1,
@@ -132,7 +137,7 @@ func TestFitDevFieldEncoding(t *testing.T) {
 		Value: types.FitString("aboba"),
 	}, encoding.LittleEndian, false, nil)
 
-	encodeAndValidate(t, &DevField{
+	encodeAndValidate(a, &DevField{
 		Def: &DevFieldDefinition{
 			Field: &FieldDescriptionStub{
 				DevDataIndex: 3,
@@ -147,7 +152,7 @@ func TestFitDevFieldEncoding(t *testing.T) {
 		Value: types.FitSint32(234),
 	}, encoding.BigEndian, false, nil)
 
-	encodeAndValidate(t, &DevField{
+	encodeAndValidate(a, &DevField{
 		Def: &DevFieldDefinition{
 			Field: &FieldDescriptionStub{
 				DevDataIndex: 3,
@@ -161,4 +166,34 @@ func TestFitDevFieldEncoding(t *testing.T) {
 		},
 		Value: types.FitSint32(-1234),
 	}, encoding.BigEndian, false, nil)
+
+	encodeAndValidate(a, &DevField{
+		Def: &DevFieldDefinition{
+			Field: &FieldDescriptionStub{
+				DevDataIndex: 1,
+				DefNum:       2,
+				BaseType:     types.FIT_TYPE_STRING,
+			},
+			Size: types.FitUint8(len("not a fit string") + 1),
+			DevId: &DeveloperDataIdStub{
+				DevDataIndex: 1,
+			},
+		},
+		Value: "not a fit string",
+	}, encoding.LittleEndian, false, nil)
+
+	encodeAndValidate(a, &DevField{
+		Def: &DevFieldDefinition{
+			Field: &FieldDescriptionStub{
+				DevDataIndex: 1,
+				DefNum:       2,
+				BaseType:     types.FIT_TYPE_STRING,
+			},
+			Size: 3,
+			DevId: &DeveloperDataIdStub{
+				DevDataIndex: 1,
+			},
+		},
+		Value: types.FitString("fit string with invalid size"),
+	}, encoding.LittleEndian, false, nil)
 }
