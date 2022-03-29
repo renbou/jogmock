@@ -7,8 +7,10 @@ package activities
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/renbou/jogmock/activities/internal/gpx"
 	"github.com/renbou/jogmock/activities/internal/randutil"
 	"github.com/renbou/jogmock/activities/internal/wavegen"
 )
@@ -57,6 +59,8 @@ func (o *SpeedOptions) validate() error {
 // CommonSpeed should configure smooth and slow transitions, whereas
 // RareSpeed should configure rough and immediate transitions.
 type ActivityOptions struct {
+	Name        string
+	Description string
 	// Required, the activity type. Currently only Run and Ride are supported
 	Type ActivityType
 	// Required, the activity starting time
@@ -173,6 +177,8 @@ func (o *ActivityOptions) validateAndSetDefaults() error {
 
 // Activity represents a single activity of any valid type
 type Activity struct {
+	name            string
+	description     string
 	activityType    ActivityType
 	startTime       time.Time
 	desiredSpeed    float64
@@ -250,6 +256,16 @@ func (a *Activity) Type() ActivityType {
 // Start returns the starting time of the activity
 func (a *Activity) Start() time.Time {
 	return a.startTime
+}
+
+// Name returns the name of the activity
+func (a *Activity) Name() string {
+	return a.name
+}
+
+// Description returns the description of the activity
+func (a *Activity) Description() string {
+	return a.description
 }
 
 // intermediateRecord builds an intermediate record which is a result
@@ -367,11 +383,49 @@ func (a *Activity) addFadeOut() error {
 	return nil
 }
 
-// BuildRecords finalizes the activity by adding the fade-out
-// and returns the constructed list of records
-func (a *Activity) BuildRecords() ([]Record, error) {
+// Finalize finalizes the activity by adding the fade-out.
+// Records should not be added after this point
+func (a *Activity) Finalize() error {
 	if err := a.addFadeOut(); err != nil {
-		return nil, err
+		return err
 	}
-	return a.records, nil
+	return nil
+}
+
+// Records returns the built records. This should be used only after
+// fully constructing the activity and calling BuildRecords.
+func (a *Activity) Records() []Record {
+	return a.records
+}
+
+// BuildFromGPX
+func (a *Activity) BuildFromGPX(b []byte) error {
+	gpx, err := gpx.UnmarshalGPX(b)
+	if err != nil {
+		return err
+	}
+
+	// add each record from the gpx file to the activity
+	for _, trackPart := range gpx.Track.TrackSegment.TrackParts {
+		lat, err := strconv.ParseFloat(trackPart.Lat, 64)
+		if err != nil {
+			return err
+		}
+		lon, err := strconv.ParseFloat(trackPart.Lon, 64)
+		if err != nil {
+			return err
+		}
+
+		if err := a.AddRecord(&Record{
+			Lat:      lat,
+			Lon:      lon,
+			Altitude: trackPart.Elevation,
+		}); err != nil {
+			return err
+		}
+	}
+
+	// finalize the activity
+	a.Finalize()
+	return nil
 }
