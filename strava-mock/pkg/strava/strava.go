@@ -9,8 +9,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/fit"
-	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/renbou/jogmock/fit-encoder/fit"
+	"github.com/renbou/jogmock/fit-encoder/fit/types"
 )
 
 type (

@@ -5,9 +5,9 @@ package strava
 import (
 	"errors"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
-	"github.com/renbou/jogmock/strava-mock/pkg/fit"
-	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/renbou/jogmock/fit-encoder/encoding"
+	"github.com/renbou/jogmock/fit-encoder/fit"
+	"github.com/renbou/jogmock/fit-encoder/fit/types"
 )
 
 // devData is a helper for working with developer data

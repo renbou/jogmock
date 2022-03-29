@@ -3,8 +3,8 @@
 package strava
 
 import (
-	"github.com/renbou/jogmock/strava-mock/pkg/fit"
-	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/renbou/jogmock/fit-encoder/fit"
+	"github.com/renbou/jogmock/fit-encoder/fit/types"
 )
 
 // getters for all needed strava fit message definitions
