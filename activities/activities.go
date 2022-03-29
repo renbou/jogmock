@@ -242,6 +242,16 @@ func (a *Activity) TotalDuration() time.Duration {
 	}
 }
 
+// Type returns the activity type
+func (a *Activity) Type() ActivityType {
+	return a.activityType
+}
+
+// Start returns the starting time of the activity
+func (a *Activity) Start() time.Time {
+	return a.startTime
+}
+
 // intermediateRecord builds an intermediate record which is a result
 // of moving from prev to next with given speed, and returns the new record
 // as well as a boolean representing whether the next record was reached
