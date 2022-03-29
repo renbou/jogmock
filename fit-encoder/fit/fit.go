@@ -7,8 +7,8 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
-	"github.com/renbou/jogmock/strava-mock/pkg/hash/crc16"
+	"github.com/renbou/jogmock/fit-encoder/encoding"
+	"github.com/renbou/jogmock/fit-encoder/hash/crc16"
 )
 
 // FitFile stores sequential definition and data messages

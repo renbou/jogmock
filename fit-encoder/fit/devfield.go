@@ -6,9 +6,9 @@ import (
 	"errors"
 	"io"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
-	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
-	"github.com/renbou/jogmock/strava-mock/pkg/io/maybe"
+	"github.com/renbou/jogmock/fit-encoder/encoding"
+	"github.com/renbou/jogmock/fit-encoder/fit/types"
+	"github.com/renbou/jogmock/fit-encoder/io/maybe"
 )
 
 // DeveloperDataIdStub is a struct representing only the "required" part

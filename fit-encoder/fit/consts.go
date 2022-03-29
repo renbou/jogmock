@@ -3,7 +3,7 @@ package fit
 import (
 	"errors"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/renbou/jogmock/fit-encoder/fit/types"
 )
 
 const (

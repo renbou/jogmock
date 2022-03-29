@@ -11,7 +11,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
+	"github.com/renbou/jogmock/fit-encoder/encoding"
 )
 
 type (

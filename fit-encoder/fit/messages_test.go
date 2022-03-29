@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
-	"github.com/renbou/jogmock/strava-mock/pkg/fit/types"
+	"github.com/renbou/jogmock/fit-encoder/encoding"
+	"github.com/renbou/jogmock/fit-encoder/fit/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

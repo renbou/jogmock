@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/renbou/jogmock/strava-mock/pkg/encoding"
+	"github.com/renbou/jogmock/fit-encoder/encoding"
 	"github.com/stretchr/testify/assert"
 )
 
