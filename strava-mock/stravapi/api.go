@@ -157,6 +157,7 @@ func (api *ApiClient) Authorize(recaptchaToken string) error {
 			"email":            api.Email,
 			"email_language":   "en_GB",
 			"password":         api.Password,
+			"recaptcha":        recaptchaToken,
 		}).
 		SetResult(&TokenResponse{}).
 		Post("https://cdn-1.strava.com/api/v3/oauth/internal/token?hl=en")
