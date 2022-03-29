@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Strava Recaptcha</string>
+    <string name="complete_recaptcha">Complete reCAPTCHA</string>
+    <string name="recaptcha_token_will_be_here">reCAPTCHA token will be here</string>
 </resources>

@@ -1,25 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/linearLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     tools:context=".MainActivity">
 
     <Button
         android:id="@+id/captchaButton"
-        android:layout_width="match_parent"
-        android:layout_height="78dp"
-        android:text="Complete reCAPTCHA" />
+        android:layout_width="346dp"
+        android:layout_height="81dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:backgroundTint="#FF5722"
+        android:text="@string/complete_recaptcha"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@+id/tokenTextView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.494"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/tokenTextView"
-        android:layout_width="match_parent"
-        android:layout_height="231dp"
-        android:fontFamily="monospace"
-        android:text="reCAPTCHA token will be here"
+        android:layout_width="353dp"
+        android:layout_height="421dp"
+        android:layout_marginBottom="100dp"
+        android:fontFamily="@font/fira_sans_medium"
+        android:text="@string/recaptcha_token_will_be_here"
         android:textAlignment="center"
         android:textIsSelectable="true"
-        android:textSize="16sp" />
-</LinearLayout>
+        android:textSize="24sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/captchaButton" />
+</androidx.constraintlayout.widget.ConstraintLayout>
