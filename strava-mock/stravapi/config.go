@@ -9,9 +9,9 @@ import (
 )
 
 type rawApiConfig struct {
-	Email    string `yaml:"email" validate:"required,email"`
-	Password string `yaml:"password" validate:"required"`
-	Token    string `yaml:"token"`
+	Email    string `validate:"required,email"`
+	Password string `validate:"required"`
+	Token    string
 	// full mobile application version identifier
 	MobileAppVersion string `yaml:"app_version" validate:"required"`
 	// company that produced the device, ex "Xiaomi" or Honor
