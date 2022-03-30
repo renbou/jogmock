@@ -11,10 +11,11 @@ import (
 	"gopkg.in/yaml.v2"
 
 	bubblesCommon "github.com/mritd/bubbles/common"
-	bubblesSelector "github.com/mritd/bubbles/selector"
+	selectorBubble "github.com/mritd/bubbles/selector"
 	"github.com/renbou/jogmock/activities"
-	bubblesAutoPrompt "github.com/renbou/jogmock/jogmock-cli/pkg/bubbles/autoprompt"
-	bubblesPrompt "github.com/renbou/jogmock/jogmock-cli/pkg/bubbles/prompt"
+	autoPromptBubble "github.com/renbou/jogmock/jogmock-cli/pkg/bubbles/autoprompt"
+	promptBubble "github.com/renbou/jogmock/jogmock-cli/pkg/bubbles/prompt"
+	stravaBubble "github.com/renbou/jogmock/jogmock-cli/pkg/bubbles/strava"
 	"github.com/renbou/jogmock/strava-mock/stravapi"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,7 @@ type activityConfig struct {
 	RareSpeed       *activities.SpeedOptions `yaml:"rare_speed_options"`
 	RareSpeedChance float64                  `yaml:"rare_speed_chance"`
 	FadeDuration    int                      `yaml:"fade_duration"`
+	FadeFraction    float64                  `yaml:"fade_fraction"`
 }
 
 type UserConfig struct {
@@ -56,6 +58,16 @@ func (args *Arguments) LoadConfig() (*UserConfig, error) {
 	return config, nil
 }
 
+func (args *Arguments) SaveConfig(config *UserConfig) error {
+	configFile, err := os.Create(args.ConfigPath)
+	if err != nil {
+		return err
+	}
+
+	encoder := yaml.NewEncoder(configFile)
+	return encoder.Encode(config)
+}
+
 type viewer interface {
 	View() string
 }
@@ -69,6 +81,8 @@ func (s modelStep) Update(msg tea.Msg) (cmd tea.Cmd) {
 	if msg == bubblesCommon.DONE {
 		if s.after != nil {
 			switch model := s.model.(type) {
+			case interface{ Value() interface{} }:
+				s.after(model.Value())
 			case interface{ Value() string }:
 				s.after(model.Value())
 			case interface{ Selected() interface{} }:
@@ -80,12 +94,16 @@ func (s modelStep) Update(msg tea.Msg) (cmd tea.Cmd) {
 		return nil
 	} else {
 		switch model := s.model.(type) {
-		case *bubblesPrompt.Model:
+		case *promptBubble.Model:
 			_, cmd = model.Update(msg)
-		case *bubblesSelector.Model:
+		case *selectorBubble.Model:
 			_, cmd = model.Update(msg)
-		case *bubblesAutoPrompt.Model:
+		case *autoPromptBubble.Model:
 			_, cmd = model.Update(msg)
+		case tea.Model:
+			_, cmd = model.Update(msg)
+		default:
+			panic(fmt.Sprintf("unknown model: %v", s.model))
 		}
 	}
 	return
@@ -136,28 +154,27 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 	model := &ActivityModel{config: config}
 	model.steps = []simpleModel{
 		modelStep{
-			&bubblesAutoPrompt.Model{
-				Prompt:            bubblesCommon.FontColor("Path to GPX file: ", bubblesPrompt.ColorPrompt),
+			&autoPromptBubble.Model{
+				Prompt:            bubblesCommon.FontColor("Path to GPX file: ", promptBubble.ColorPrompt),
 				ValidateOkPrefix:  OkPrefix,
 				ValidateErrPrefix: ErrPrefix,
 			},
 			func(value interface{}) {
-				_, model.gpxFilePath = bubblesAutoPrompt.UserExpand(value.(string))
+				_, model.gpxFilePath = autoPromptBubble.UserExpand(value.(string))
 			},
 		},
 		modelStep{
-			&bubblesSelector.Model{
+			&selectorBubble.Model{
 				Data:           []interface{}{"Run", "Ride"},
-				HeaderFunc:     bubblesSelector.DefaultHeaderFuncWithAppend("Type:"),
-				SelectedFunc:   bubblesSelector.DefaultSelectedFuncWithIndex("[%d]"),
-				UnSelectedFunc: bubblesSelector.DefaultUnSelectedFuncWithIndex(" %d."),
-				FooterFunc: func(m bubblesSelector.Model, obj interface{}, gdIndex int) string {
+				HeaderFunc:     selectorBubble.DefaultHeaderFuncWithAppend("Type:"),
+				SelectedFunc:   selectorBubble.DefaultSelectedFuncWithIndex("[%d]"),
+				UnSelectedFunc: selectorBubble.DefaultUnSelectedFuncWithIndex(" %d."),
+				FooterFunc: func(m selectorBubble.Model, obj interface{}, gdIndex int) string {
 					return ""
 				},
 				FinishedFunc: func(selected interface{}) string {
-					return bubblesCommon.FontColor(fmt.Sprintf(
-						"%s Type: %v\n", OkPrefix, selected),
-						bubblesSelector.ColorFinished)
+					return bubblesCommon.FontColor(OkPrefix+" Type: ", selectorBubble.ColorFinished) +
+						fmt.Sprintln(selected)
 				},
 			},
 			func(value interface{}) {
@@ -176,13 +193,14 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 					model.options.RareSpeed = activityCfg.RareSpeed
 					model.options.RareSpeedChance = activityCfg.RareSpeedChance
 					model.options.FadeDuration = time.Duration(activityCfg.FadeDuration) * time.Second
+					model.options.FadeFraction = activityCfg.FadeFraction
 				}
 			},
 		},
 		modelStep{
-			&bubblesPrompt.Model{
-				Prompt:            bubblesCommon.FontColor("Name: ", bubblesPrompt.ColorPrompt),
-				ValidateFunc:      bubblesPrompt.VFNotBlank,
+			&promptBubble.Model{
+				Prompt:            bubblesCommon.FontColor("Name: ", promptBubble.ColorPrompt),
+				ValidateFunc:      promptBubble.VFNotBlank,
 				ValidateOkPrefix:  OkPrefix,
 				ValidateErrPrefix: ErrPrefix,
 			},
@@ -191,8 +209,8 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 			},
 		},
 		modelStep{
-			&bubblesPrompt.Model{
-				Prompt:            bubblesCommon.FontColor("Description: ", bubblesPrompt.ColorPrompt),
+			&promptBubble.Model{
+				Prompt:            bubblesCommon.FontColor("Description: ", promptBubble.ColorPrompt),
 				ValidateOkPrefix:  OkPrefix,
 				ValidateErrPrefix: ErrPrefix,
 			},
@@ -201,9 +219,9 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 			},
 		},
 		modelStep{
-			&bubblesPrompt.Model{
+			&promptBubble.Model{
 				Prompt: bubblesCommon.FontColor("Start time (DD.MM.YYYY HH:MM:SS): ",
-					bubblesPrompt.ColorPrompt),
+					promptBubble.ColorPrompt),
 				ValidateFunc:      strIsTime,
 				ValidateOkPrefix:  OkPrefix,
 				ValidateErrPrefix: ErrPrefix,
@@ -213,8 +231,8 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 			},
 		},
 		modelStep{
-			&bubblesPrompt.Model{
-				Prompt: bubblesCommon.FontColor("Desired speed (km/h) as float: ", bubblesPrompt.ColorPrompt),
+			&promptBubble.Model{
+				Prompt: bubblesCommon.FontColor("Desired speed (km/h) as float: ", promptBubble.ColorPrompt),
 				ValidateFunc: func(val string) error {
 					_, err := strconv.ParseFloat(val, 64)
 					return err
@@ -224,6 +242,16 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 			},
 			func(value interface{}) {
 				model.options.DesiredSpeed, _ = strconv.ParseFloat(value.(string), 64)
+			},
+		},
+		modelStep{
+			&stravaBubble.Model{
+				ActivityOptions: &model.options,
+				ApiConfig:       model.config.StravaConfig,
+				GpxFilePath:     &model.gpxFilePath,
+			},
+			func(value interface{}) {
+				model.config.StravaConfig = value.(*stravapi.ApiConfig)
 			},
 		},
 	}
@@ -244,16 +272,13 @@ func (m *ActivityModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// otherwise if simply reading values
 	switch msg {
 	case updateViewMsg:
-		if m.index == len(m.steps) {
-			return m, tea.Quit
-		}
-		return m, nil
+		return m, tea.Quit
 	case bubblesCommon.DONE:
 		m.steps[m.index].Update(bubblesCommon.DONE)
 		m.index++
 		if m.index < len(m.steps) {
 			// initialize the next prompt
-			m.steps[m.index].Update(nil)
+			return m, m.steps[m.index].Update(nil)
 		}
 		return m, updateView
 	}
@@ -272,47 +297,6 @@ func (m *ActivityModel) View() string {
 	}
 	return view
 }
-
-// func readGpxIntoActivity(activity *strava.StravaActivity, gpxFilePath string) error {
-// 	// read and unmarshal the actual file
-// 	gpxFile, err := os.Open(gpxFilePath)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer gpxFile.Close()
-
-// 	bytes, err := ioutil.ReadAll(gpxFile)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	gpx := new(GPX)
-// 	if err := xml.Unmarshal(bytes, &gpx); err != nil {
-// 		return err
-// 	}
-
-// 	// actually convert the gpx to a strava activity
-// 	for _, trackPart := range gpx.Track.TrackSegment.TrackParts {
-// 		lat, err := strconv.ParseFloat(trackPart.Lat, 64)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		lon, err := strconv.ParseFloat(trackPart.Lon, 64)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		if err := activity.AddRecord(&strava.Record{
-// 			Lat:      lat,
-// 			Lon:      lon,
-// 			Altitude: trackPart.Elevation,
-// 		}); err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	return nil
-// }
 
 var (
 	rootCmd = &cobra.Command{
@@ -338,44 +322,10 @@ func run(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Printf("%+v\n", model.options)
-
-	// activity, err := activities.NewActivity(&activities.ActivityOptions{})
-
-	// // create activity
-	// activity, err := strava.NewActivity(&strava.ActivityOptions{
-	// 	AppVersion:         config.internalMobileAppVersion,
-	// 	MobileAppVersion:   config.MobileAppVersion,
-	// 	DeviceManufacturer: config.DeviceManufacturer,
-	// 	DeviceModel:        config.DeviceModel,
-	// 	DeviceOsVersion:    strconv.Itoa(config.DeviceOsVersion),
-	// 	ActivityType:       model.activityType,
-	// 	StartTime:          model.startTime,
-	// 	DesiredSpeed:       model.desiredSpeed,
-	// })
-	// if err != nil {
-	// 	prettylog.Fatal("Unable to create activity: " + err.Error())
-	// }
-	// prettylog.Info("Activity created")
-	// log.Println(infoStyle.Render(""))
-
-	// // fill up the activity
-	// if err := readGpxIntoActivity(activity, model.gpxFilePath); err != nil {
-	// 	log.Fatal(errorStyle.Render("[!] Error while converting gpx to strava activity: ") + err.Error())
-	// }
-	// log.Println(infoStyle.Render("[+] GPX successfully converted to strava activity"))
-
-	// // construct the fit file for the activity
-	// fitFile, err := activity.BuildFitFile()
-	// if err != nil {
-	// 	log.Fatal(errorStyle.Render("[!] Error while building the fit file for the activity: " + err.Error()))
-	// }
-	// log.Println(infoStyle.Render("[+] Activity built into fit file"))
-
-	// if err := sendActivity(fitFile); err != nil {
-	// 	log.Fatal(errorStyle.Render("[!] Error while sending fit file: " + err.Error()))
-	// }
-	// log.Println(infoStyle.Render("[+] Activity uploaded, check your strava!"))
+	if err := arguments.SaveConfig(model.config); err != nil {
+		fmt.Println(ErrPrefix+" Failed to save new config: "+err.Error(), ColorError)
+		return
+	}
 }
 
 func init() {

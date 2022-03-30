@@ -2,7 +2,14 @@
 
 package randutil
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func Float64InRange(a, b float64) float64 {
 	return rand.Float64()*(b-a) + a

@@ -24,21 +24,21 @@ type ApiClient struct {
 	client *resty.Client
 }
 
-func NewClient(options *ApiConfig) (*ApiClient, error) {
-	if options.appVersion == 0 {
+func NewClient(config *ApiConfig) (*ApiClient, error) {
+	if config.appVersion == 0 {
 		return nil, errors.New("internal app version must not be zero")
 	}
-	if options.MobileAppVersion == "" {
+	if config.MobileAppVersion == "" {
 		return nil, errors.New("full mobile app version must be set")
 	}
-	if options.DeviceManufacturer == "" {
+	if config.DeviceManufacturer == "" {
 		return nil, errors.New("device manufacturer must be set")
 	}
-	if options.DeviceModel == "" {
+	if config.DeviceModel == "" {
 		return nil, errors.New("device model must be set")
 	}
 
-	switch options.DeviceOsVersion {
+	switch config.DeviceOsVersion {
 	case 11:
 	case 10:
 	case 9:
@@ -52,7 +52,7 @@ func NewClient(options *ApiConfig) (*ApiClient, error) {
 	restyClient.SetHeader("X-Strava-Nav-Version", "2")
 
 	client := &ApiClient{}
-	client.ApiConfig = *options
+	client.ApiConfig = *config
 	client.client = restyClient
 	return client, nil
 }

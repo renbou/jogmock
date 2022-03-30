@@ -79,6 +79,9 @@ type ActivityOptions struct {
 	// records at the beginning and the last FadeDuration at the end,
 	// making it seem like the activity speed began and ended smoothly at 0.
 	FadeDuration time.Duration
+	// The fraction of speed which should be faded. E.g. 0.5 would mean
+	// that the fading would begin at 50% of the desired speed instead of 0.
+	FadeFraction float64
 }
 
 const (
@@ -86,9 +89,10 @@ const (
 	maxRareSpeedChance float64 = 0.5
 	minFadeDuration            = 20 * time.Second
 	// minFadeDuration - fadeRandomAmplitude should be > 0
-	fadeRandomAmplitude            = 10
+	fadeRandomFraction             = 0.25
 	DefaultRareSpeedChance float64 = 0.1
 	DefaultFadeDuration            = 45 * time.Second
+	DefaultFadeFraction            = 0.5
 )
 
 var (
@@ -156,6 +160,14 @@ func (o *ActivityOptions) validateAndSetDefaults() error {
 		o.FadeDuration = DefaultFadeDuration
 	}
 
+	if o.FadeFraction != 0 {
+		if o.FadeFraction < 0 || o.FadeFraction > 1 {
+			return fmt.Errorf("fade fraction should be in range (0, 1), but got: %f", o.FadeFraction)
+		}
+	} else {
+		o.FadeFraction = DefaultFadeFraction
+	}
+
 	if o.CommonSpeed == nil {
 		if o.Type == RunActivity {
 			o.CommonSpeed = &DefaultRunCommonSpeed
@@ -185,11 +197,14 @@ type Activity struct {
 	wave            wavegen.Wave
 	fadeInDuration  time.Duration
 	fadeOutDuration time.Duration
+	fadeFraction    float64
 	records         []Record
 }
 
 func randomiseFade(fadeDuration time.Duration) time.Duration {
-	return fadeDuration + time.Second*time.Duration(randutil.IntInRange(-fadeRandomAmplitude, fadeRandomAmplitude))
+	amplitude := int(float64(fadeDuration) / float64(time.Second) * fadeRandomFraction)
+	return fadeDuration + time.Second*time.Duration(
+		randutil.IntInRange(-amplitude, amplitude))
 }
 
 // NewActivity initializes a new activity with the given options
@@ -199,6 +214,8 @@ func NewActivity(options *ActivityOptions) (*Activity, error) {
 	}
 
 	return &Activity{
+		name:         options.Name,
+		description:  options.Description,
 		activityType: options.Type,
 		startTime:    options.Start,
 		desiredSpeed: options.DesiredSpeed,
@@ -220,6 +237,7 @@ func NewActivity(options *ActivityOptions) (*Activity, error) {
 		},
 		fadeInDuration:  randomiseFade(options.FadeDuration),
 		fadeOutDuration: randomiseFade(options.FadeDuration),
+		fadeFraction:    options.FadeFraction,
 	}, nil
 }
 
@@ -301,9 +319,10 @@ func intermediateRecord(prev *Record, next *Record, speed float64) (intermediate
 	return
 }
 
-func calculateFadeSegmentSpeed(fadeDuration time.Duration, speed float64) float64 {
+func calculateFadeSegmentSpeed(fadeDuration time.Duration, fadeFraction float64, speed float64) float64 {
 	fadeSeconds := float64(fadeDuration / time.Second)
-	return speed / fadeSeconds
+	// only fade the last quarter of the speed
+	return speed / fadeSeconds * fadeFraction
 }
 
 var (
@@ -328,7 +347,7 @@ func (a *Activity) AddRecord(record *Record) error {
 			Altitude:  record.Altitude,
 			Timestamp: a.startTime,
 			Distance:  0,
-			Speed:     0,
+			Speed:     (a.desiredSpeed * 1 / 4),
 		})
 		return nil
 	}
@@ -339,8 +358,9 @@ func (a *Activity) AddRecord(record *Record) error {
 	for !reached {
 		if a.TotalDuration() < a.fadeInDuration {
 			// add the fade-in records if we haven't reached our desired speed yet
-			fadeInSegmentSpeed := calculateFadeSegmentSpeed(a.fadeInDuration, a.desiredSpeed)
-			speed = fadeInSegmentSpeed * float64(a.TotalDuration()/time.Second)
+			fadeInSegmentSpeed := calculateFadeSegmentSpeed(a.fadeInDuration, a.fadeFraction, a.desiredSpeed)
+			speed = fadeInSegmentSpeed*(float64(a.TotalDuration())/float64(time.Second)+1) +
+				(a.desiredSpeed * (1 - a.fadeFraction))
 		} else {
 			speed = a.wave.Next()
 		}
@@ -357,25 +377,44 @@ func (a *Activity) addFadeOut() error {
 		return errors.New("unable to add fade-out to an activity shorter than the fade duration")
 	}
 
-	// remove the last records and add them with a faded-out speed
-	fadeOutSeconds := int(a.fadeOutDuration / time.Second)
-	recBeforeFadeout := &a.records[len(a.records)-fadeOutSeconds]
-	fadeOutRecords := a.records[len(a.records)-fadeOutSeconds+1:]
-	a.records = a.records[:len(a.records)-fadeOutSeconds+1]
+	fadeOutSeconds := float64(a.fadeOutDuration / time.Second)
+	fadeOutStartIndex := len(a.records) - int(a.fadeOutDuration/time.Second) - 1
 
-	fadeOutSegmentSpeed := calculateFadeSegmentSpeed(a.fadeOutDuration, recBeforeFadeout.Speed)
-	calcSegmentSpeed := func() float64 {
-		return fadeOutSegmentSpeed * (float64(fadeOutSeconds) - float64(
-			(a.lastRecord().Timestamp.Sub(recBeforeFadeout.Timestamp))/time.Second,
-		))
+	// Find a record from which we can start the fade-out
+	// so that it actually lasts the desired number of seconds.
+	// This is needed because we are slowing down, and if
+	// this isn't done, then we'll waste much more time than wanted
+	for ; ; fadeOutStartIndex++ {
+		fadeOutStartSpeed := a.records[fadeOutStartIndex].Speed / 3600
+		fadeOutSegmentSpeed := calculateFadeSegmentSpeed(
+			a.fadeOutDuration, a.fadeFraction, fadeOutStartSpeed) / 3600
+		traversedDistance := fadeOutStartSpeed*fadeOutSeconds -
+			fadeOutSegmentSpeed*fadeOutSeconds*fadeOutSeconds/2
+		if traversedDistance >= a.TotalDistance()-a.records[fadeOutStartIndex].Distance {
+			break
+		}
 	}
 
-	prev := recBeforeFadeout
-	for _, record := range fadeOutRecords {
+	recBeforeFadeout := &a.records[fadeOutStartIndex]
+	fadeOutRecords := make([]Record, len(a.records)-fadeOutStartIndex-1)
+	copy(fadeOutRecords, a.records[fadeOutStartIndex+1:])
+	a.records = a.records[:fadeOutStartIndex+1]
+
+	fadeOutSegmentSpeed := calculateFadeSegmentSpeed(a.fadeOutDuration, a.fadeFraction, recBeforeFadeout.Speed)
+	calcSegmentSpeed := func() float64 {
+		actualFadeout := float64(a.lastRecord().Timestamp.Sub(recBeforeFadeout.Timestamp)) / float64(time.Second)
+		if actualFadeout > float64(fadeOutSeconds) {
+			return fadeOutSegmentSpeed
+		}
+		return fadeOutSegmentSpeed*(float64(fadeOutSeconds)-actualFadeout) +
+			(recBeforeFadeout.Speed * (1 - a.fadeFraction))
+	}
+
+	for i := range fadeOutRecords {
 		var intermediate Record
 		reached := false
 		for !reached {
-			intermediate, reached = intermediateRecord(prev, &record, calcSegmentSpeed())
+			intermediate, reached = intermediateRecord(a.lastRecord(), &fadeOutRecords[i], calcSegmentSpeed())
 			a.records = append(a.records, intermediate)
 		}
 	}
