@@ -130,7 +130,13 @@ type ActivityModel struct {
 
 func strToTimestamp(val string) (time.Time, error) {
 	t, err := time.Parse("02.01.2006 15:04:05", val)
-	return t, err
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	// offset the time by local timezone offset before sending it as timestamp
+	_, offset := time.Now().Zone()
+	return t.Add(-time.Second * time.Duration(offset)), nil
 }
 
 func strIsTime(val string) error {
@@ -240,7 +246,10 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 				Prompt: bubblesCommon.FontColor("Desired speed (km/h) as float: ", promptBubble.ColorPrompt),
 				ValidateFunc: func(val string) error {
 					_, err := strconv.ParseFloat(val, 64)
-					return err
+					if err != nil {
+						return errors.New("input speed as a float, error: " + err.Error())
+					}
+					return nil
 				},
 				ValidateOkPrefix:  OkPrefix,
 				ValidateErrPrefix: ErrPrefix,

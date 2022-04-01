@@ -106,6 +106,7 @@ func (m *Model) initData() {
 
 	m.input = in
 	m.init = true
+	m.err = m.ValidateFunc(m.input.Value())
 }
 
 // View reads the data state of the data model for rendering
