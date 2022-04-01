@@ -78,6 +78,11 @@ func fitEncodeCoordinate(coord float64) int {
 	)
 }
 
+func fitEncodeTimestamp(t time.Time) int64 {
+	// fit time is offset by 631065600 seconds
+	return t.Add(-time.Second * 631065600).Unix()
+}
+
 func fitEncodeDuration(duration time.Duration) int {
 	return int(duration.Milliseconds())
 }
@@ -108,7 +113,8 @@ func (act *StravaActivity) writeHeader(file *fit.FitFile) error {
 		return err
 	}
 	fileIdMessageData, err := fileIdMessageDef.ConstructData(
-		FIT_MANUFACTURER_STRAVA, FIT_PRODUCT_STRAVA_ANDROID, FIT_FILEID_TYPE_ACTIVITY, time.Now().Unix())
+		FIT_MANUFACTURER_STRAVA, FIT_PRODUCT_STRAVA_ANDROID, FIT_FILEID_TYPE_ACTIVITY,
+		fitEncodeTimestamp(act.Activity.Start()))
 	if err != nil {
 		return nil
 	}
@@ -201,7 +207,7 @@ func (act *StravaActivity) writeHeader(file *fit.FitFile) error {
 		return err
 	}
 	sessionMessageData, err := sessionMessageDef.ConstructData(
-		fitEncodeDuration(act.Activity.TotalDuration()), act.Activity.Start().Unix(),
+		fitEncodeDuration(act.Activity.TotalDuration()), fitEncodeTimestamp(act.Activity.Start()),
 		fitEncodeDuration(act.Activity.TotalDuration()), fitEncodeDistanceKm(act.Activity.TotalDistance()),
 		fitActivitySport(act),
 		FIT_SESSION_EVENT_SESSION, FIT_EVENT_TYPE_STOP, FIT_SESSION_ONE_LAP, STRAVA_FIRST_LIVE_ACTIVITY_ID,
@@ -223,7 +229,7 @@ func (act *StravaActivity) writeHeader(file *fit.FitFile) error {
 		return err
 	}
 	lapMessageData, err := lapMessageDef.ConstructData(
-		fitEncodeDuration(act.Activity.TotalDuration()), act.Activity.Start().Unix(),
+		fitEncodeDuration(act.Activity.TotalDuration()), fitEncodeTimestamp(act.Activity.Start()),
 		fitEncodeDuration(act.Activity.TotalDuration()), fitEncodeDistanceKm(act.Activity.TotalDistance()),
 		FIT_LAP_EVENT_LAP, FIT_EVENT_TYPE_STOP, fitActivitySport(act), FIT_LAP_TRIGGER_SESSION_END)
 	if err != nil {
@@ -243,7 +249,7 @@ func (act *StravaActivity) writeHeader(file *fit.FitFile) error {
 		return err
 	}
 	deviceInfoBatteryMessageData, err := deviceInfoBatteryMessageDef.ConstructData(
-		FIT_MANUFACTURER_STRAVA, FIT_PRODUCT_STRAVA_ANDROID, act.Activity.Start().Unix(), FIT_BATTERY_STATUS_GOOD)
+		FIT_MANUFACTURER_STRAVA, FIT_PRODUCT_STRAVA_ANDROID, fitEncodeTimestamp(act.Activity.Start()), FIT_BATTERY_STATUS_GOOD)
 	if err != nil {
 		return nil
 	}
@@ -265,7 +271,7 @@ func (act *StravaActivity) writeBody(file *fit.FitFile) error {
 		return err
 	}
 	eventStartMessageData, err := eventMessageDef.ConstructData(
-		FIT_EVENT_TIMER, act.Activity.Start().Unix(), FIT_EVENT_TIMER_TRIGGER_MANUAL, FIT_EVENT_TYPE_START)
+		FIT_EVENT_TIMER, fitEncodeTimestamp(act.Activity.Start()), FIT_EVENT_TIMER_TRIGGER_MANUAL, FIT_EVENT_TYPE_START)
 	if err != nil {
 		return nil
 	}
@@ -299,7 +305,7 @@ func (act *StravaActivity) writeBody(file *fit.FitFile) error {
 		recordMessageData, err := recordMessageDef.ConstructData(
 			fitEncodeCoordinate(record.Lat), fitEncodeCoordinate(record.Lon),
 			fitEncodeAltitudeM(record.Altitude), fitEncodeSpeedKmH(record.Speed),
-			STRAVA_NOICE_GPS_ACCURACY, record.Timestamp.Unix())
+			STRAVA_NOICE_GPS_ACCURACY, fitEncodeTimestamp(record.Timestamp))
 		if err != nil {
 			return err
 		}
@@ -309,7 +315,7 @@ func (act *StravaActivity) writeBody(file *fit.FitFile) error {
 
 		// add record distance data
 		recordDistanceMessageData, err := recordDistanceMessageDef.ConstructData(
-			record.Timestamp.Unix(), fitEncodeDistanceKm(record.Distance))
+			fitEncodeTimestamp(record.Timestamp), fitEncodeDistanceKm(record.Distance))
 		if err != nil {
 			return err
 		}
@@ -321,7 +327,7 @@ func (act *StravaActivity) writeBody(file *fit.FitFile) error {
 	// add stop event to file
 	eventStopMessageData, err := eventMessageDef.ConstructData(
 		FIT_EVENT_TIMER,
-		act.Activity.Start().Add(act.Activity.TotalDuration()).Unix(),
+		fitEncodeTimestamp(act.Activity.Start().Add(act.Activity.TotalDuration())),
 		FIT_EVENT_TIMER_TRIGGER_MANUAL, FIT_EVENT_TYPE_STOP)
 	if err != nil {
 		return nil
@@ -345,7 +351,7 @@ func (act *StravaActivity) writeFooter(file *fit.FitFile) error {
 	}
 	deviceInfoBatteryMessageData, err := deviceInfoBatteryMessageDef.ConstructData(
 		FIT_MANUFACTURER_STRAVA, FIT_PRODUCT_STRAVA_ANDROID,
-		act.Activity.Start().Add(act.Activity.TotalDuration()).Unix(),
+		fitEncodeTimestamp(act.Activity.Start().Add(act.Activity.TotalDuration())),
 		FIT_BATTERY_STATUS_GOOD)
 	if err != nil {
 		return nil

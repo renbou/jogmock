@@ -1,6 +1,7 @@
 package strava
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -23,6 +24,7 @@ const (
 type Model struct {
 	ActivityOptions *activities.ActivityOptions
 	GpxFilePath     *string
+	OutputPath      *string
 	ApiConfig       *stravapi.ApiConfig
 
 	apiClient *stravapi.ApiClient
@@ -60,6 +62,7 @@ type msg int
 
 const (
 	viewErrMsg msg = iota
+	saveActivityMsg
 	initApiClientMsg
 	uploadActivityMsg
 	uploadedActivityMsg
@@ -67,6 +70,10 @@ const (
 
 func viewErr() tea.Msg {
 	return viewErrMsg
+}
+
+func saveActivity() tea.Msg {
+	return saveActivityMsg
 }
 
 func initApiClient() tea.Msg {
@@ -94,12 +101,30 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.builtActivity = true
+
+		if *m.OutputPath != "" {
+			return m, saveActivity
+		}
 		return m, initApiClient
 	}
 
 	switch msg {
 	case viewErrMsg:
 		return m, tea.Quit
+	case saveActivityMsg:
+		file, err := os.Create(*m.OutputPath)
+		if err != nil {
+			m.err = err
+			return m, viewErr
+		}
+
+		encoder := json.NewEncoder(file)
+		records := m.activity.Records()
+		m.err = encoder.Encode(records)
+		if m.err != nil {
+			return m, viewErr
+		}
+		return m, bubblesCommon.Done
 	case initApiClientMsg:
 		m.apiClient, m.err = stravapi.NewClient(m.ApiConfig)
 		if m.err != nil {
@@ -180,5 +205,8 @@ func (m *Model) View() string {
 }
 
 func (m *Model) Value() interface{} {
-	return m.apiClient.Config()
+	if m.apiClient != nil {
+		return m.apiClient.Config()
+	}
+	return nil
 }

@@ -48,6 +48,7 @@ device_os_version: 10`, true, &ApiConfig{
 			DeviceModel:        "P20",
 			DeviceOsVersion:    10,
 		},
+		247.10,
 		1223782,
 	})
 
@@ -119,7 +120,8 @@ func TestConfigMarshal(t *testing.T) {
 				DeviceModel:        "P20",
 				DeviceOsVersion:    10,
 			},
-			uint32(1223782),
+			247.10,
+			1223782,
 		}, `email: test@test.com
 password: some-pass
 token: fake-token

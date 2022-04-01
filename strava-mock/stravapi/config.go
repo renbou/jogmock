@@ -27,7 +27,8 @@ type rawApiConfig struct {
 type ApiConfig struct {
 	rawApiConfig
 	// internal identifier of the app version
-	appVersion uint32
+	publicAppVersion   float64
+	internalAppVersion uint32
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface
@@ -49,7 +50,8 @@ func (cfg *ApiConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	cfg.rawApiConfig = *rawCfg
-	cfg.appVersion = internalMobileVer
+	cfg.publicAppVersion = publicMobileVer
+	cfg.internalAppVersion = internalMobileVer
 	return nil
 }
 

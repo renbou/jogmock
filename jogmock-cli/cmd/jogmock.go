@@ -37,6 +37,7 @@ type UserConfig struct {
 // Arguments represents the possible commmand-line arguments
 type Arguments struct {
 	ConfigPath string
+	OutputPath string
 }
 
 // LoadConfig reads and returns the config defined by args
@@ -119,6 +120,7 @@ type simpleModel interface {
 }
 
 type ActivityModel struct {
+	args        *Arguments
 	config      *UserConfig
 	options     activities.ActivityOptions
 	gpxFilePath string
@@ -151,7 +153,10 @@ const (
 )
 
 func NewActivityModel(config *UserConfig) *ActivityModel {
-	model := &ActivityModel{config: config}
+	model := &ActivityModel{
+		args:   &arguments,
+		config: config,
+	}
 	model.steps = []simpleModel{
 		modelStep{
 			&autoPromptBubble.Model{
@@ -249,9 +254,12 @@ func NewActivityModel(config *UserConfig) *ActivityModel {
 				ActivityOptions: &model.options,
 				ApiConfig:       model.config.StravaConfig,
 				GpxFilePath:     &model.gpxFilePath,
+				OutputPath:      &model.args.OutputPath,
 			},
 			func(value interface{}) {
-				model.config.StravaConfig = value.(*stravapi.ApiConfig)
+				if value != nil {
+					model.config.StravaConfig = value.(*stravapi.ApiConfig)
+				}
 			},
 		},
 	}
@@ -330,6 +338,8 @@ func run(cmd *cobra.Command, args []string) {
 
 func init() {
 	rootCmd.Flags().StringVar(&arguments.ConfigPath, "config", "config.yml", "path to config file")
+	rootCmd.Flags().StringVar(&arguments.OutputPath, "output", "",
+		"path where to output the created route instead of uploading")
 }
 
 func main() {

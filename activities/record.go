@@ -14,13 +14,13 @@ import (
 // building the activity, the other parameters will be
 // calculated automagically.
 type Record struct {
-	Lat float64
-	Lon float64
+	Lat float64 `json:"latitude"`
+	Lon float64 `json:"longitude"`
 	// altitude in meters
-	Altitude  float64
-	Timestamp time.Time
-	Speed     float64
-	Distance  float64
+	Altitude  float64   `json:"altitude"`
+	Timestamp time.Time `json:"timestamp"`
+	Speed     float64   `json:"speed"`
+	Distance  float64   `json:"distance"`
 }
 
 // DistanceTo calculates the distance between this and another record on the globe, in kilometres

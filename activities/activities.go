@@ -465,6 +465,5 @@ func (a *Activity) BuildFromGPX(b []byte) error {
 	}
 
 	// finalize the activity
-	a.Finalize()
-	return nil
+	return a.Finalize()
 }

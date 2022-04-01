@@ -4,6 +4,7 @@ package stravapi
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,7 +26,7 @@ type ApiClient struct {
 }
 
 func NewClient(config *ApiConfig) (*ApiClient, error) {
-	if config.appVersion == 0 {
+	if config.internalAppVersion == 0 {
 		return nil, errors.New("internal app version must not be zero")
 	}
 	if config.MobileAppVersion == "" {
@@ -50,6 +51,11 @@ func NewClient(config *ApiConfig) (*ApiClient, error) {
 	restyClient := resty.New()
 	restyClient.SetHeader("X-Strava-Trial-Status", "false")
 	restyClient.SetHeader("X-Strava-Nav-Version", "2")
+	restyClient.SetHeader("User-Agent", fmt.Sprintf("Strava/%.2f", config.publicAppVersion))
+	// allow running through any proxy
+	restyClient.SetTLSClientConfig(&tls.Config{
+		InsecureSkipVerify: true,
+	})
 
 	client := &ApiClient{}
 	client.ApiConfig = *config
@@ -63,7 +69,7 @@ func (api *ApiClient) UploadActivity(activity *activities.Activity) error {
 	}
 
 	a := stravafit.StravaActivity{
-		AppVersion:         api.appVersion,
+		AppVersion:         api.internalAppVersion,
 		MobileAppVersion:   api.MobileAppVersion,
 		DeviceManufacturer: api.DeviceManufacturer,
 		DeviceModel:        api.DeviceModel,
@@ -105,9 +111,11 @@ func (api *ApiClient) UploadActivity(activity *activities.Activity) error {
 		"commute":                   false,
 		"description":               activity.Description(),
 		"heartrate_opt_out":         false,
+		"hide_from_home":            false,
 		"perceived_exertion":        4,
 		"photo_ids":                 []string{},
 		"prefer_perceived_exertion": false,
+		"selected_polyline_style":   "default",
 		"stats_visibility": []map[string]interface{}{
 			{
 				"type":       "calories",
@@ -115,6 +123,10 @@ func (api *ApiClient) UploadActivity(activity *activities.Activity) error {
 			},
 			{
 				"type":       "speed",
+				"visibility": "everyone",
+			},
+			{
+				"type":       "pace",
 				"visibility": "everyone",
 			},
 		},
