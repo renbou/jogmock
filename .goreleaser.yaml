@@ -22,7 +22,7 @@ archives:
     files:
       - README.md
       - config-example.yml
-      - src: strava-recaptcha/app/release/strava-recaptcha.apk
+      - src: "**/release/*.apk"
         dst: .
         strip_parent: true
 checksum:
