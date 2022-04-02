@@ -1,6 +1,6 @@
 .vscode/
 .token-cache
 config.yml
-release/
 
+# GoReleaser
 dist/
