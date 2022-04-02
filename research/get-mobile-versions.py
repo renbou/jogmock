@@ -25,7 +25,7 @@ def get_apk_version(path: str):
     apktool_info = yaml.load(f)
   name = apktool_info["versionInfo"]["versionName"]
   code = apktool_info["versionInfo"]["versionCode"]
-  return f"{name}({code})"
+  return f"{name} ({code})"
 
 def download_and_extract_version_info(link):
   print("Downloading file from", link)
