@@ -1,0 +1,59 @@
+strava:
+  email: ***
+  password: ***
+  mobile_app_version: 230.10 (1221988) # Mobile App -> Settings in top right corner -> About -> Version
+  device_manufacturer: Xiaomi # ex: Xiaomi, Huawei
+  device_model: Redmi Note 9 Pro # ex: Redmi Note 9 Pro, Huawei P30 Pro
+  device_os_version: 10 # ex: 10 (Android Q), 11 (Red Velvet Cake)
+
+# Speed wave generation options to be used during runs.
+# Since services such as strava draw the graphs of the speed,
+# the speed wave needs to be randomly generated. Internally,
+# it is generated as a random wave using the given parameters.
+run_activity:
+  # During an activity people run or ride with different speeds
+  # at different times. You might get tired and go slower,
+  # or you might suddenly speed up. The speed wave generation is
+  # split up into two types of slopes: common and rare. During common
+  # slopes, the speed doesn't change much and it changes slower, however,
+  # during a rare slope, the speed changes suddenly and by a larger ammount.
+  common_speed_options:
+    # Slope describes the maximum possible angle of a common slope.
+    # When a common slope is generated, a random tan(φ) is picked in the range
+    # (-slope, slope) and defines the angle of the slope.
+    slope: 0.4
+    # Amplitude is the maximum change of speed during a common slope in km/h.
+    # The change won't always be equal, less or greater than this, however
+    # the value will be used to create changes of this size on average.
+    amplitude: 1.5
+    # The speed wave consists of slopes where the speed is rising and slopes
+    # where it is falling. Each slope duration (the time during which the change takes place)
+    # is generated using these values.
+    minduration: 20 # Minimum duration of the slope, in seconds
+    maxduration: 50 # Maximum duration of the slope, in seconds
+  # Same options as above, but for rare slopes.
+  rare_speed_options:
+    slope: 1
+    amplitude: 2.5
+    minduration: 15
+    maxduration: 30
+  # The chance of a rare slope occurring during the generation of a new slope.
+  # Each time the old slope finishes, this chance gets used to decide whether
+  # to generate a rare slope or a common slope. Should be in range (0, 1)
+  rare_speed_chance: 0.1
+  # In order to add some realism to the speed slope, the beginning and the
+  # end of the activity must show speeding-up and slowing-down, respectively.
+  # These variables specify the approximate duration (it is altered a bit to add some randomness)
+  # of the speed-up to the desired speed and from the desired speed,
+  # as well as the fraction from which to start speeding up and at which to end starting up.
+  # The default options mean that the activity will start with speed = desired_speed/2
+  # and during the first 45 seconds the speed will reach desired_speed, after which the
+  # actual wave generation will begin. Generally speeking, fade_fraction can be set to a higher
+  # value in order to "scale" the speed wave more (make it look smoother) and to a smaller value
+  # in order to make it more "spiky". 
+  fade_duration: 45
+  fade_fraction: 0.5
+# All of the same options as above, but for ride activities. Note that these
+# are set to null to give an example that nearly all of the options for route
+# generation have defaults, allowing you to provide only those that you need.
+ride_activity: null
