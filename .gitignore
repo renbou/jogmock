@@ -2,3 +2,5 @@
 .token-cache
 config.yml
 release/
+
+dist/
