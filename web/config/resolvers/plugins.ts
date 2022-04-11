@@ -1,8 +1,8 @@
-import * as path from "path";
-import * as fs from "fs/promises";
 import type { Alias, ResolverFunction } from "vite";
 import type { LegacyImporter, LegacyImporterResult } from "sass";
 import type { PossiblyResolver } from ".";
+import * as path from "path";
+import * as fs from "fs/promises";
 import resolver from ".";
 
 class banlistRegExp extends RegExp {
@@ -96,7 +96,7 @@ export const scssLegacyAliasImporter = (
   aliases: Aliases
 ): LegacyImporter<"async"> => {
   const r = aliasesResolver(aliases, resolver.sass, resolver.pkgJson);
-  return function async(
+  return function (
     url: string,
     prev: string,
     done: (result: LegacyImporterResult) => void
@@ -110,3 +110,48 @@ export const scssLegacyAliasImporter = (
     });
   };
 };
+
+// Type of data stored in a variables.json
+type cssVariables = {
+  [key: string]: string | cssVariables;
+};
+
+export function scssLegacyJsonImporter(
+  url: string,
+  prev: string,
+  done: (result: LegacyImporterResult) => void
+): void {
+  // Custom scheme is needed because otherwise Vite breaks?? for some reason
+  if (!url.startsWith("json:")) {
+    done(null);
+    return;
+  }
+  url = url.slice("json:".length);
+
+  fs.readFile(path.join(path.dirname(prev), `${url}.json`)).then((data) => {
+    const json = JSON.parse(data.toString());
+
+    const camelToKebab = (s: string): string => {
+      return s
+        .replace(/([A-Z])/g, " $1")
+        .split(" ")
+        .map((s) => s[0].toLowerCase() + s.slice(1))
+        .join("-");
+    };
+
+    let variables = "";
+    // Convert all variables in json to kebab-case: value
+    const generateVars = (prefix: string, map: cssVariables) => {
+      for (const key in map) {
+        const kebabKey = `${prefix}${prefix && "-"}${camelToKebab(key)}`;
+        if (typeof map[key] === "string") {
+          variables += `$${kebabKey}: ${map[key]};\n`;
+        } else {
+          generateVars(kebabKey, map[key] as cssVariables);
+        }
+      }
+    };
+    generateVars(camelToKebab(path.parse(url).name), json as cssVariables);
+    done({ contents: variables });
+  });
+}

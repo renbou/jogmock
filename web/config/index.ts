@@ -8,3 +8,6 @@ export function isProd(mode?: string) {
 export function isDev(mode?: string) {
   return !isProd(mode);
 }
+
+export const duringDev = isDev();
+export const duringProd = isProd();

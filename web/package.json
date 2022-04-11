@@ -27,6 +27,7 @@
     "@types/node": "*",
     "@types/page": "^1.11.5",
     "@types/sass": "^1.43.1",
+    "@types/tailwindcss": "^3.0.10",
     "autoprefixer": "^10.4.4",
     "bulma": "^0.9.3",
     "cross-env": "^7.0.3",

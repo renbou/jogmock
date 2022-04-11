@@ -1,16 +1,22 @@
 import type { Options } from "@sveltejs/vite-plugin-svelte";
 import sveltePreprocess from "svelte-preprocess";
-import { scssLegacyAliasImporter } from "./config/resolvers";
-import { isDev } from "./config";
+import {
+  scssLegacyAliasImporter,
+  scssLegacyJsonImporter,
+} from "./config/resolvers";
+import { duringDev } from "./config";
 
 const config: Options = {
   preprocess: sveltePreprocess({
-    sourceMap: isDev(),
+    sourceMap: duringDev,
     scss: {
-      importer: scssLegacyAliasImporter({
-        "@": "./src",
-        "~": "./node_modules",
-      }),
+      importer: [
+        scssLegacyAliasImporter({
+          "@": "./src",
+          "~": "./node_modules",
+        }),
+        scssLegacyJsonImporter,
+      ],
       prependData: '@use "@styles/variables" as *;',
     },
   }),

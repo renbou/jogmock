@@ -7,6 +7,7 @@ specifiers:
   '@types/node': '*'
   '@types/page': ^1.11.5
   '@types/sass': ^1.43.1
+  '@types/tailwindcss': ^3.0.10
   autoprefixer: ^10.4.4
   bulma: ^0.9.3
   cross-env: ^7.0.3
@@ -36,6 +37,7 @@ devDependencies:
   '@types/node': 17.0.23
   '@types/page': 1.11.5
   '@types/sass': 1.43.1
+  '@types/tailwindcss': 3.0.10
   autoprefixer: 10.4.4_postcss@8.4.12
   bulma: 0.9.3
   cross-env: 7.0.3
@@ -198,6 +200,10 @@ packages:
     resolution: {integrity: sha512-BPdoIt1lfJ6B7rw35ncdwBZrAssjcwzI5LByIrYs+tpXlj/CAkuVdRsgZDdP4lq5EjyWzwxZCqAoFyHKFwp32g==}
     dependencies:
       '@types/node': 17.0.23
+    dev: true
+
+  /@types/tailwindcss/3.0.10:
+    resolution: {integrity: sha512-1UnZIHO0NOPyPlPFV0HuMjki2SHkvG9uBA1ZehWj/OQMSROk503nuNyyfmJSIT289yewxTbKoPG+KLxYRvfIIg==}
     dev: true
 
   /acorn-node/1.8.2:

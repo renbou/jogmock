@@ -1,26 +1,36 @@
-import type * as Postcss from "postcss";
+import type * as PostCss from "postcss";
 import purgecss from "@fullhuman/postcss-purgecss";
-import { defaultExtractor } from "./config/purgecss";
 import cssnano from "cssnano";
-import { isDev } from "./config";
+import tailwindcss from "tailwindcss";
+import tailwindConfig from "./tailwind.config";
+import autoprefixer from "autoprefixer";
+import { defaultExtractor } from "./config/purgecss";
+import { duringProd } from "./config";
 
-type PostcssConfig = Postcss.ProcessOptions & {
-  plugins?: Postcss.Plugin[];
+type PostcssConfig = PostCss.ProcessOptions & {
+  plugins?: PostCss.Plugin[];
 };
 
 const config: PostcssConfig = {
-  plugins: isDev()
-    ? []
-    : [
+  plugins: (() => {
+    const plugins: PostCss.Plugin[] = [
+      tailwindcss(tailwindConfig),
+      autoprefixer(),
+    ];
+    if (duringProd) {
+      plugins.push(
         purgecss({
           content: ["src/**/*.svelte"],
           defaultExtractor,
           // Keep html, body which are only in index.html as well as Svelte's scoped classes
           safelist: ["html", "body", /svelte-/],
-        }) as Postcss.Plugin,
+        }) as PostCss.Plugin,
         cssnano({
           preset: ["default", { discardComments: { removeAll: true } }],
-        }),
-      ],
+        })
+      );
+    }
+    return plugins;
+  })(),
 };
 export default config;

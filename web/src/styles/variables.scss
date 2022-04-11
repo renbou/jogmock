@@ -1,7 +1,16 @@
 @charset "utf-8";
 
+// Load variables from JSON. By default it should contain a TailwindCss
+// "extend" config so that the variables can be used for configuring
+// both Bulma and Tailwind. Note that the scheme here is needed because 
+// otherwise Vite breaks, probably due to some errors in the legacy dart-sass API.
+@import "json:variables";
+
 // Text
-$family-sans-serif: 'Poppins', sans-serif;
+$family-sans-serif: $variables-font-family-serif;
+$family-sans: $variables-font-family-sans;
+$family-primary: $family-sans;
+$family-secondary: $family-sans-serif;
 
 // Color theme
 $primary: rgb(255, 112, 30);
