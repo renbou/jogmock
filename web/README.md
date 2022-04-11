@@ -1,16 +1,19 @@
 # Svelte template
-Decent template for Svelte apps built with Vite.
-
-Included features:
-- Bulma + Sass for styling with proper variable exports
-- PurgeCSS with custom Svelte extractor + postcss-discard-comments for style minification
-- Custom alias resolvers for Vite and Sass which allow `@-` and `~-` style imports (`~bulma`, `@components`) 
+Decent template for Svelte apps built with Vite and styled using Bulma.
 
 To create a new project using this template `degit` can be used:
 ```bash
 degit renbou/svelte-template svelte-app
 cd svelte-app
 ```
+
+## Features
+- `Bulma` + `Sass` for styling with proper variable exports (all libraries' variables available)
+- `Vite` for fast dev server and bundling with `Rollup`
+- JS minification using Vite's default `esbuild`
+- CSS minification using `PurgeCSS` and `cssnano`
+- HTML minification using `html-minifier-terser`
+- Alias resolvers providing allow `@`- and `~`-style imports for `src/` and `node_modules/` respectively (`~bulma`, `@components`) 
 
 ## How to
 1. Install deps using `pnpm install` and run `pnpm start` to launch the `vite` dev server and `svelte-check` watcher.  

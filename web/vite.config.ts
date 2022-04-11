@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
       },
       preprocessorOptions: {
         scss: {
-          charset: false, // remove useless CSS charsets
+          charset: false, // Remove useless CSS charsets
         },
       },
     },
