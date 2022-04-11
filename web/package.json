@@ -1,0 +1,48 @@
+{
+  "name": "svelte-template",
+  "version": "0.1.0",
+  "description": "Typical Svelte template.",
+  "scripts": {
+    "dev": "vite",
+    "compile": "vite build",
+    "check": "svelte-check --human",
+    "build:config": "esbuild svelte.config.ts --bundle --minify --platform=node --format=esm --external:svelte-preprocess --outfile=svelte.config.js",
+    "watch:svelte": "svelte-check --human --watch",
+    "start": "pnpm build:config && pnpm run-p watch:* dev",
+    "build": "cross-env NODE_ENV=production run-s build:config check compile",
+    "serve": "sirv dist --single"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/renbou/svelte-template.git"
+  },
+  "type": "module",
+  "author": "renbou",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/renbou/svelte-template#readme",
+  "devDependencies": {
+    "@fullhuman/postcss-purgecss": "^4.1.3",
+    "@sveltejs/vite-plugin-svelte": "^1.0.0-next.41",
+    "@tsconfig/svelte": "^3.0.0",
+    "@types/page": "^1.11.5",
+    "@types/sass": "^1.43.1",
+    "bulma": "^0.9.3",
+    "cross-env": "^7.0.3",
+    "cssnano": "^5.1.7",
+    "esbuild": "^0.14.34",
+    "htmlparser2": "^7.2.0",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.4.12",
+    "sass": "^1.50.0",
+    "sirv-cli": "^2.0.2",
+    "svelte": "^3.47.0",
+    "svelte-check": "^2.6.0",
+    "svelte-preprocess": "^4.10.5",
+    "typescript": "^4.6.3",
+    "vite": "^2.9.1",
+    "vite-plugin-html": "^3.2.0"
+  },
+  "dependencies": {
+    "page": "^1.11.6"
+  }
+}

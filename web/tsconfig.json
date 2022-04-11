@@ -1,0 +1,13 @@
+{
+  "extends": "@tsconfig/svelte/tsconfig.json",
+  "include": ["src/**/*", "config/**/*"],
+  "exclude": ["node_modules/*", "dist/*"],
+  "compilerOptions": {
+    "paths": {
+      "@*": ["./src/*"],
+      "~*": ["./node_modules/*"]
+    },
+    "strict": true,
+    "module": "ES2020"
+  }
+}

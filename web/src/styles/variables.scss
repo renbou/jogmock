@@ -1,0 +1,16 @@
+@charset "utf-8";
+
+// Text
+$family-sans-serif: 'Poppins', sans-serif;
+
+// Color theme
+$primary: rgb(255, 112, 30);
+
+$navbar-padding-vertical: 0.7rem;
+$navbar-padding-horizontal: 2rem;
+$box-padding: 1.5rem;
+$footer-padding: 2rem 1.5rem 4rem;
+
+// Currently use legacy import since bulma doesn't support new modular system
+// In the future replace with "use ... with ()"
+@import "~bulma/sass/utilities/all";
