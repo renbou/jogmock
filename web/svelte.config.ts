@@ -1,11 +1,11 @@
 import type { Options } from "@sveltejs/vite-plugin-svelte";
 import sveltePreprocess from "svelte-preprocess";
 import { scssLegacyAliasImporter } from "./config/resolvers";
+import { isDev } from "./config";
 
-const production = process.env["NODE_ENV"] === "production";
 const config: Options = {
   preprocess: sveltePreprocess({
-    sourceMap: !production,
+    sourceMap: isDev(),
     scss: {
       importer: scssLegacyAliasImporter({
         "@": "./src",
