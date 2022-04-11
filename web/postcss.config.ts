@@ -1,6 +1,6 @@
 import type * as Postcss from "postcss";
 import purgecss from "@fullhuman/postcss-purgecss";
-import purgeSvelte from "./config/purgecss";
+import { defaultExtractor } from "./config/purgecss";
 import cssnano from "cssnano";
 import { isDev } from "./config";
 
@@ -14,7 +14,7 @@ const config: PostcssConfig = {
     : [
         purgecss({
           content: ["src/**/*.svelte"],
-          extractors: [{ extensions: ["svelte"], extractor: purgeSvelte }],
+          defaultExtractor,
           // Keep html, body which are only in index.html as well as Svelte's scoped classes
           safelist: ["html", "body", /svelte-/],
         }) as Postcss.Plugin,
