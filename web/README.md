@@ -8,10 +8,11 @@ cd svelte-app
 ```
 
 ## Features
-- `Bulma` + `Sass` for styling with proper variable exports (all libraries' variables available)
-- `Vite` for fast dev server and bundling with `Rollup`
+- `Bulma` + `Sass` for styling with properly configurable and exported variables
+- `TailwindCSS` for CSS utils to avoid writing lots of meaningless CSS classes
+- `Vite` for a fast dev server and bundling with `Rollup`
 - JS minification using Vite's default `esbuild`
-- CSS minification using `PurgeCSS` and `cssnano`
+- CSS minification using `PurgeCSS` and `csso` (faster and better than `cssnano`)
 - HTML minification using `html-minifier-terser`
 - Alias resolvers providing allow `@`- and `~`-style imports for `src/` and `node_modules/` respectively (`~bulma`, `@components`) 
 
