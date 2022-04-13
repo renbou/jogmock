@@ -1,12 +1,22 @@
 @charset "utf-8";
-// Load variables and then load Bulma with those variables
+// Load variables and then load Bulma with those variables.
+// Avoid loading everything from Bulma to lighten what has to be processed,
+// and definitely avoid loading helpers since we use tailwind instead.
 @import "variables";
-@import "~/bulma";
+@import "~bulma/sass/base/all";
+@import "~bulma/sass/grid/columns";
+@import "~bulma/sass/elements/content";
+@import "~bulma/sass/elements/button";
+@import "~bulma/sass/elements/box";
+@import "~bulma/sass/form/all";
+@import "~bulma/sass/components/navbar";
+@import "~bulma/sass/layout/section";
+@import "~bulma/sass/layout/footer";
 
 // Fonts and external styles
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap");
 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Poppins:wght@400;500;700&display=swap');
 
-// Load Tailwind CSS
-@import "~tailwindcss/base";
+// Load Tailwind CSS. The reset shouldn't be needed since Bulma
+// already includes a reset and Tailwind's one will override the styles.
+// @import "~tailwindcss/base";
 @import "~tailwindcss/utilities";

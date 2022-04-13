@@ -1,6 +1,15 @@
 {
   "fontFamily": {
-    "sans": "'Poppins', sans-serif",
-    "serif": "'Merriweather', serif"
+    "sans": ["Poppins", "sans-serif"],
+    "serif": ["Merriweather", "serif"]
+  },
+  "colors": {
+    "primary": "rgb(255, 112, 30)"
+  },
+  "borderRadius": {
+    "sm": "0.125rem",
+    "DEFAULT": "0.25rem",
+    "md": "0.375rem",
+    "lg": "0.5rem"
   }
 }

@@ -7,13 +7,18 @@
 @import "json:variables";
 
 // Text
-$family-sans-serif: $variables-font-family-serif;
-$family-sans: $variables-font-family-sans;
-$family-primary: $family-sans;
-$family-secondary: $family-sans-serif;
+$family-sans-serif: $variables-font-family-sans;
+$family-serif: $variables-font-family-serif;
+$family-primary: $family-sans-serif;
+$family-secondary: $family-serif;
 
 // Color theme
-$primary: rgb(255, 112, 30);
+$primary: $variables-colors-primary;
+
+// Border
+$radius-small: $variables-border-radius-sm;
+$radius: $variables-border-radius-default;
+$radius-large: $variables-border-radius-md;
 
 $navbar-padding-vertical: 0.7rem;
 $navbar-padding-horizontal: 2rem;

@@ -1,6 +1,6 @@
 import type * as PostCss from "postcss";
 import purgecss from "@fullhuman/postcss-purgecss";
-import cssnano from "cssnano";
+import csso from "postcss-csso";
 import tailwindcss from "tailwindcss";
 import tailwindConfig from "./tailwind.config";
 import autoprefixer from "autoprefixer";
@@ -10,7 +10,6 @@ import { duringProd } from "./config";
 type PostcssConfig = PostCss.ProcessOptions & {
   plugins?: PostCss.Plugin[];
 };
-
 const config: PostcssConfig = {
   plugins: (() => {
     const plugins: PostCss.Plugin[] = [
@@ -25,8 +24,8 @@ const config: PostcssConfig = {
           // Keep html, body which are only in index.html as well as Svelte's scoped classes
           safelist: ["html", "body", /svelte-/],
         }) as PostCss.Plugin,
-        cssnano({
-          preset: ["default", { discardComments: { removeAll: true } }],
+        csso({
+          comments: false,
         })
       );
     }

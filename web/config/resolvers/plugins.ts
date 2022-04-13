@@ -113,7 +113,7 @@ export const scssLegacyAliasImporter = (
 
 // Type of data stored in a variables.json
 type cssVariables = {
-  [key: string]: string | cssVariables;
+  [key: string]: string | string[] | cssVariables;
 };
 
 export function scssLegacyJsonImporter(
@@ -133,9 +133,10 @@ export function scssLegacyJsonImporter(
 
     const camelToKebab = (s: string): string => {
       return s
-        .replace(/([A-Z])/g, " $1")
+        .replace(/([A-Z]+)/g, " $1")
         .split(" ")
-        .map((s) => s[0].toLowerCase() + s.slice(1))
+        .filter((s) => s !== "")
+        .map((s) => s.toLowerCase())
         .join("-");
     };
 
@@ -144,10 +145,13 @@ export function scssLegacyJsonImporter(
     const generateVars = (prefix: string, map: cssVariables) => {
       for (const key in map) {
         const kebabKey = `${prefix}${prefix && "-"}${camelToKebab(key)}`;
-        if (typeof map[key] === "string") {
+        const value = map[key] as cssVariables;
+        if (typeof value === "string") {
           variables += `$${kebabKey}: ${map[key]};\n`;
+        } else if (value instanceof Array) {
+          variables += `$${kebabKey}: ${value.join(", ")};\n`;
         } else {
-          generateVars(kebabKey, map[key] as cssVariables);
+          generateVars(kebabKey, value);
         }
       }
     };
