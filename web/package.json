@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "description": "Typical Svelte template.",
   "scripts": {
-    "dev": "vite",
-    "compile": "vite build",
+    "dev": "vite -c config/vite.config.ts",
+    "compile": "vite -c config/vite.config.ts build",
     "check": "svelte-check --human",
-    "build:config": "esbuild svelte.config.ts --bundle --minify --platform=node --format=esm --external:svelte-preprocess --outfile=svelte.config.js",
+    "build:config": "esbuild config/svelte.config.ts --bundle --minify --platform=node --format=esm --external:svelte-preprocess --outfile=svelte.config.js",
     "watch:svelte": "svelte-check --human --watch",
     "start": "pnpm build:config && pnpm run-p watch:* dev",
     "build": "cross-env NODE_ENV=production run-s build:config check compile",

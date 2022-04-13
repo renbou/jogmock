@@ -1,10 +1,7 @@
 import type { Options } from "@sveltejs/vite-plugin-svelte";
 import sveltePreprocess from "svelte-preprocess";
-import {
-  scssLegacyAliasImporter,
-  scssLegacyJsonImporter,
-} from "./config/resolvers";
-import { duringDev } from "./config";
+import { scssLegacyAliasImporter, scssLegacyJsonImporter } from "./resolvers";
+import { duringDev } from ".";
 
 const config: Options = {
   preprocess: sveltePreprocess({

@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { createHtmlPlugin as html } from "vite-plugin-html";
-import { viteAlias, scssLegacyJsonImporter } from "./config/resolvers";
+import { viteAlias, scssLegacyJsonImporter } from "./resolvers";
 import postcss from "./postcss.config";
 
 export default defineConfig(({ mode }) => {

@@ -1,11 +1,12 @@
 import type * as PostCss from "postcss";
 import purgecss from "@fullhuman/postcss-purgecss";
+// @ts-ignore
 import csso from "postcss-csso";
 import tailwindcss from "tailwindcss";
 import tailwindConfig from "./tailwind.config";
 import autoprefixer from "autoprefixer";
-import { defaultExtractor } from "./config/purgecss";
-import { duringProd } from "./config";
+import { defaultExtractor } from "./purgecss";
+import { duringProd } from ".";
 
 type PostcssConfig = PostCss.ProcessOptions & {
   plugins?: PostCss.Plugin[];
