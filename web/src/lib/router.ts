@@ -3,8 +3,8 @@ import type { SvelteComponent } from "svelte";
 import { readable } from "svelte/store";
 import page from "page";
 
-import Home from "@components/Home.svelte";
-import Login from "@components/Login.svelte";
+import Home from "@pages/Home.svelte";
+import Login from "@pages/Login.svelte";
 
 export enum Route {
   Home = "/",

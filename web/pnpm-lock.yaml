@@ -1,6 +1,9 @@
 lockfileVersion: 5.3
 
 specifiers:
+  '@felte/core': ^1.2.5
+  '@felte/reporter-dom': ^1.0.5
+  '@felte/validator-zod': ^1.0.7
   '@fullhuman/postcss-purgecss': ^4.1.3
   '@sveltejs/vite-plugin-svelte': ^1.0.0-next.41
   '@tsconfig/svelte': ^3.0.0
@@ -12,6 +15,8 @@ specifiers:
   bulma: ^0.9.3
   cross-env: ^7.0.3
   esbuild: ^0.14.36
+  felte: ^1.1.7
+  nanoid: ^3.3.2
   npm-run-all: ^4.1.5
   page: ^1.11.6
   postcss: ^8.4.12
@@ -26,11 +31,18 @@ specifiers:
   typescript: ^4.6.3
   vite: ^2.9.1
   vite-plugin-html: ^3.2.0
+  zod: ^3.14.4
 
 dependencies:
+  '@felte/reporter-dom': 1.0.5
+  '@felte/validator-zod': 1.0.7_zod@3.14.4
+  felte: 1.1.7_svelte@3.47.0
+  nanoid: 3.3.2
   page: 1.11.6
+  zod: 3.14.4
 
 devDependencies:
+  '@felte/core': 1.2.5
   '@fullhuman/postcss-purgecss': 4.1.3_postcss@8.4.12
   '@sveltejs/vite-plugin-svelte': 1.0.0-next.41_svelte@3.47.0+vite@2.9.1
   '@tsconfig/svelte': 3.0.0
@@ -69,6 +81,33 @@ packages:
     dependencies:
       '@cspotcode/source-map-consumer': 0.8.0
     dev: true
+
+  /@felte/common/1.0.4:
+    resolution: {integrity: sha512-KCH0mpOzEtp06AhCqu6egm9cEQ8TGUtt1LfiUTxnT+sGBBQi/qvcx15btZvoG4tG6+H08d/wlhpE0Jps0X7vdQ==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  /@felte/core/1.2.5:
+    resolution: {integrity: sha512-fMqlmbvYMAwpv3Syz9PTPFS+H3lbKvGUiZ5gOqQol8SeqLjFsbHalT1fasKitBcBkAcP3bchKSosAJCK3T2Chw==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dependencies:
+      '@felte/common': 1.0.4
+
+  /@felte/reporter-dom/1.0.5:
+    resolution: {integrity: sha512-ONTBTqeQ5Zr1Edzo3TbCGIPujfkVP3j/2nDJxl1ev/OQs474MxkK4fn1IGQwNWEsxvoXeuNUFWeM0WcX80K/uQ==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dependencies:
+      '@felte/common': 1.0.4
+    dev: false
+
+  /@felte/validator-zod/1.0.7_zod@3.14.4:
+    resolution: {integrity: sha512-Mdp2X61gh2n0DVPs2B2TzNKbJXLkdVvlW/6KCFLj0825a9C+3E4C3XsEoxDeNTcUdZWS3BQcLim0+mf/TtC2iA==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    peerDependencies:
+      zod: ^3.2.0
+    dependencies:
+      '@felte/common': 1.0.4
+      zod: 3.14.4
+    dev: false
 
   /@fullhuman/postcss-purgecss/4.1.3_postcss@8.4.12:
     resolution: {integrity: sha512-jqcsyfvq09VOsMXxJMPLRF6Fhg/NNltzWKnC9qtzva+QKTxerCO4esG6je7hbnmkpZtaDyPTwMBj9bzfWorsrw==}
@@ -889,6 +928,16 @@ packages:
       reusify: 1.0.4
     dev: true
 
+  /felte/1.1.7_svelte@3.47.0:
+    resolution: {integrity: sha512-hvwi79UDRybKU3ybUzJFYt1aly0FKXxdPcWfXaCxTALTZ9yRVhT3lZG4YHUoyGsuWljerUp9v3i8KCLCPcpGjQ==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    peerDependencies:
+      svelte: ^3.31.0
+    dependencies:
+      '@felte/core': 1.2.5
+      svelte: 3.47.0
+    dev: false
+
   /filelist/1.0.2:
     resolution: {integrity: sha512-z7O0IS8Plc39rTCq6i6iHxk43duYOn8uFJiWSewIq0Bww1RNybVHSCjahmcC87ZqAm4OTvFzlzeGu3XAzG1ctQ==}
     dependencies:
@@ -1316,7 +1365,6 @@ packages:
     resolution: {integrity: sha512-CuHBogktKwpm5g2sRgv83jEy2ijFzBwMoYA60orPDR7ynsLijJDqgsi4RDGj3OJpy3Ieb+LYwiRmIOGyytgITA==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
-    dev: true
 
   /nice-try/1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
@@ -2170,3 +2218,7 @@ packages:
     resolution: {integrity: sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q==}
     engines: {node: '>=6'}
     dev: true
+
+  /zod/3.14.4:
+    resolution: {integrity: sha512-U9BFLb2GO34Sfo9IUYp0w3wJLlmcyGoMd75qU9yf+DrdGA4kEx6e+l9KOkAlyUO0PSQzZCa3TR4qVlcmwqSDuw==}
+    dev: false

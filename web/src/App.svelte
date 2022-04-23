@@ -11,7 +11,7 @@
       </div>
     </nav>
   </header>
-  <!-- @Render currently enabled route -->
+  <!-- Render currently enabled route -->
   <div class="grow"><svelte:component this={$router} /></div>
   <footer class="footer shrink-0">
     <div class="content text-center">
