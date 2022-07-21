@@ -1,6 +1,16 @@
 # Jogmock
 A tool providing fake activity generation and uploads to online fitness trackers (currently only Strava is supported).
 
+## Overview
+Jogmock consumes routes (for example, constructed using [gpx.studio](https://gpx.studio/)) as input and automatically generates a realistic-looking activity in your favourite fitness tracker. It smooths out the provided route and generates the supposed speed on each point using a configurable random perlin-wave-based algorithm. The configuration provided can be used to tune it in order for the generated activities to look as close as possible to your real ones.
+
+## Example
+Using Jogmock is as simple as running a CLI app:
+![Jogmock CLI Usage](./example/jogmock-cli.png)  
+
+After which a new run magically appears in your activites!
+![Jogmock result on Strava](./example/jogmock-strava.png)
+
 ## Disclaimer
 By using this tool you agree to follow all the steps listed below or confirm your actions with me if they differ from the steps.
 
@@ -32,7 +42,9 @@ By using this tool you agree to follow all the steps listed below or confirm you
 3. Using the modified config.yml and the downloaded file, you can start using Jogmock:
    1. Download the release appropriate to your OS and architecture.
    2. Install the bundled APK on your device. It is needed to get a reCAPTCHA token suitable for use with Strava and which will be needed during the first time you use `jogmock`.
-   3. Launch the tool in your terminal and simply follow the steps. During GPX selection you can use Tab to autocomplete file paths.
+   3. Launch the tool in your terminal and simply follow the steps. During GPX selection you can use Tab to autocomplete file paths.  
+
+After configuring the reCAPTCHA token and login info, jogmock will cache it and not ask for it until needed.
 
 ## Help
 ### Config
