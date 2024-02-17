@@ -11,9 +11,6 @@ Using Jogmock is as simple as running a CLI app:
 After which a new run magically appears in your activites!
 ![Jogmock result on Strava](./example/jogmock-strava.png)
 
-## Disclaimer
-By using this tool you agree to follow all the steps listed below or confirm your actions with me if they differ from the steps.
-
 ## How to
 1. Move config-example.yml to config.yml and change the variables to match your device. The following mobile versions can be used (or can be found in Mobile App -> Settings -> About) for the `mobile_app_version` version. Pick a random one, please.
    - 248.8 (1223885)
@@ -47,6 +44,4 @@ By using this tool you agree to follow all the steps listed below or confirm you
 After configuring the reCAPTCHA token and login info, jogmock will cache it and not ask for it until needed.
 
 ## Help
-### Config
 The `run_activity` and `ride_activity` configs specify options used to generate the speed during an activity. You just need to specify the desired speed and `jogmock` will generate everything automatically, and these parameters can be used to fine-tune the generation in order for it to look as real (to you) as possible. Proper description of each option is specified in the example config.
-### 
